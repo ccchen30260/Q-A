@@ -56,7 +56,7 @@
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <i data-lucide="folder-git-2" class="w-4 h-4 text-indigo-400"></i>
-                        已索引之持久化檔案庫 (影片 / PDF / 網頁 / YouTube)
+                        已索引之持久化檔案庫 (網頁/表格 / 影片 / PDF / YouTube)
                     </span>
                     <div class="flex items-center gap-1.5">
                         <button onclick="openUrlModal()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm">
@@ -89,9 +89,9 @@
                         <i data-lucide="bot" class="w-4 h-4"></i>
                     </div>
                     <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-200 max-w-[85%] leading-relaxed">
-                        歡迎使用多模態知識庫系統！現已支援<strong>「影片、PDF文件、語音檔、網頁連結 (URL) 以及 YouTube 影片」</strong>。
+                        歡迎使用多模態知識庫系統！現已完整支援<strong>「網頁表格 (HTML Table)、PDF 文件、影片、語音與 YouTube 影片」</strong>。
                         <br><br>
-                        請上傳資料或貼上連結，點擊對話中引述的出處連結即可於右側區域自動定位播放或高亮查看！
+                        抓取的網頁表格會自動轉換為 Markdown 數據表，您可以精準查詢表格中的數據資料！
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                     <input 
                         type="text" 
                         id="userInput" 
-                        placeholder="請輸入關於已儲存檔案或網頁的問題... (如：文章重點為何？)" 
+                        placeholder="請輸入關於已儲存檔案或網頁表格的問題..." 
                         class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
                     >
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shrink-0">
@@ -130,7 +130,7 @@
                 <div id="emptyState" class="text-center text-slate-500">
                     <i data-lucide="file-search" class="w-12 h-12 mx-auto mb-3 text-slate-600 stroke-[1.5]"></i>
                     <p class="text-sm">在左側問答中點擊出處連結 (例如 <span class="text-indigo-400 border border-indigo-500/30 px-1 py-0.5 rounded">01:25</span> 或 <span class="text-emerald-400 border border-emerald-500/30 px-1 py-0.5 rounded">網頁段落</span>)</p>
-                    <p class="text-xs text-slate-600 mt-1">此區將自動跳轉播放影片、導引至 PDF 特定頁面或顯示網頁內文</p>
+                    <p class="text-xs text-slate-600 mt-1">此區將自動跳轉播放影片、導引至 PDF 特定頁面或顯示包含表格的網頁內文</p>
                 </div>
 
                 <!-- Video Player Container -->
@@ -168,7 +168,7 @@
                         </div>
                         <span id="docPageIndicator" class="bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30">第 1 頁</span>
                     </div>
-                    <div id="docContentArea" class="flex-1 p-6 overflow-y-auto space-y-4 font-sans text-slate-300 leading-relaxed text-sm">
+                    <div id="docContentArea" class="flex-1 p-6 overflow-y-auto space-y-4 font-sans text-slate-300 leading-relaxed text-sm whitespace-pre-wrap font-mono">
                         <!-- Rendered Document Page/Section Chunks -->
                     </div>
                 </div>
@@ -181,27 +181,27 @@
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                 <i data-lucide="globe" class="w-5 h-5 text-emerald-400"></i>
-                新增網頁至知識庫
+                新增網頁/表格至知識庫
             </h3>
             
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1">網頁標題 (選填，未填自動抓取)</label>
-                    <input type="text" id="webpageTitle" placeholder="例如：AI 科技最新發展報導" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                    <input type="text" id="webpageTitle" placeholder="例如：財報數據統計表 / 產品規格表" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">網頁 URL 網址</label>
                     <div class="flex gap-2">
-                        <input type="url" id="webpageUrl" placeholder="https://example.com/article" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <input type="url" id="webpageUrl" placeholder="https://example.com/table-data" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
                         <button id="btnFetchUrl" onclick="fetchWebpageContent()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded font-medium transition shrink-0 flex items-center gap-1">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                            <span>抓取網頁</span>
+                            <span>抓取網頁(含表格)</span>
                         </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">網頁內文預覽 (亦可直接複製貼上文字內容)</label>
-                    <textarea id="webpageContent" rows="6" placeholder="點擊「抓取網頁」後將在此顯示內文。&#10;&#10;💡 若網頁設有防火牆或登入限制致自動抓取受阻，可直接複製該網頁文章貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs leading-relaxed"></textarea>
+                    <label class="block text-slate-400 mb-1">網頁與表格內文預覽 (含 Markdown 格式表格)</label>
+                    <textarea id="webpageContent" rows="7" placeholder="點擊「抓取網頁」後將在此顯示文章與轉換好的表格資料。&#10;&#10;💡 若網頁設有密碼或動態驗證，亦可手動複製表格文字貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs leading-relaxed"></textarea>
                 </div>
             </div>
 
@@ -219,7 +219,6 @@
                 <i data-lucide="youtube" class="w-5 h-5 text-red-500"></i>
                 新增 YouTube 影片至知識庫
             </h3>
-            
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1">影片標題 (選填)</label>
@@ -227,14 +226,13 @@
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">YouTube 影片 URL 網址</label>
-                    <input type="url" id="ytUrl" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ 或 https://youtu.be/..." class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-red-500">
+                    <input type="url" id="ytUrl" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-red-500">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">影片逐字稿 / 字幕內容 (請貼上字幕或對話摘要，供 AI 檢索定位)</label>
-                    <textarea id="ytTranscript" rows="5" placeholder="請將 YouTube 影片字幕、摘要或對話內容貼上於此...&#10;例：&#10;[00:15] 今天要介紹 AI Agent 的最新演進...&#10;[01:30] 核心架構分為感知、記憶與行動三個模組..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-red-500 font-sans leading-relaxed"></textarea>
+                    <label class="block text-slate-400 mb-1">影片逐字稿 / 字幕內容</label>
+                    <textarea id="ytTranscript" rows="5" placeholder="請將 YouTube 影片字幕貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-red-500 font-sans leading-relaxed"></textarea>
                 </div>
             </div>
-
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button onclick="closeYtModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs">取消</button>
                 <button onclick="saveYtDoc()" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-medium">存入持久化知識庫</button>
@@ -259,7 +257,7 @@
                     <input type="password" id="supabaseKey" placeholder="your-anon-key" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，填入後可啟用 Gemini AI 智慧分析與回答)</label>
+                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，可進行表格數據總結提煉)</label>
                     <input type="password" id="geminiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
@@ -278,8 +276,22 @@
 
     <!-- Application JavaScript Logic -->
     <script>
-        // Default Mock Persistent Database State
+        // Default Persistent Database State
         const DEFAULT_PERSISTED_DOCS = [
+            {
+                id: 'doc-demo-table',
+                title: '網頁範例: 2026年季度業績統計表',
+                type: 'webpage',
+                url: 'https://example.com/reports',
+                pages: [
+                    { 
+                        page: 1, 
+                        text: "【2026年第一季度各部門營收統計表】\n\n| 部門名稱 | 預算 (萬元) | 實際營收 (萬元) | 達成率 |\n| --- | --- | --- | --- |\n| 軟體開發部 | 500 | 620 | 124% |\n| 硬體設備部 | 800 | 750 | 93.7% |\n| 雲端服務部 | 350 | 480 | 137.1% |\n| 人力資源部 | 100 | 95 | 95.0% |" 
+                    }
+                ],
+                chunksCount: 1,
+                createdAt: '2026-10-13'
+            },
             {
                 id: 'doc-1',
                 title: '工業設備操作維修影片.mp4',
@@ -290,40 +302,76 @@
                 ],
                 chunksCount: 18,
                 createdAt: '2026-10-10'
-            },
-            {
-                id: 'doc-yt-demo',
-                title: 'YouTube: 人工智慧核心技術解析',
-                type: 'youtube',
-                ytId: 'dQw4w9WgXcQ',
-                url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                pages: [
-                    { page: 1, text: "[00:10] 歡迎來到 AI 核心技術講座。我們將討論神經網路的發展歷程。", sec: 10 },
-                    { page: 2, text: "[01:25] Transformer 模型採用了 Self-Attention 機制，大幅提升並行運算效能。", sec: 85 },
-                    { page: 3, text: "[03:40] 在多模態架構中，視覺與語音向量被映射至同一語意空間。", sec: 220 }
-                ],
-                chunksCount: 3,
-                createdAt: '2026-10-13'
-            },
-            {
-                id: 'doc-2',
-                title: '2026產品操作手冊_v2.pdf',
-                type: 'pdf',
-                pages: [
-                    { page: 1, text: "【第一章：設備總覽】本產品採用極化雙驅動結構，具備高效率、低能耗特色。請確保電源電壓為 220V AC。" },
-                    { page: 2, text: "【第二章：安全規範】作業時必須佩戴絕緣手套。如有異常噪音，請聯絡工程人員並按下緊急停止按鈕 (E-Stop)。" },
-                    { page: 3, text: "【第三章：定期保養】濾網建議每 30 天進行清理一次，若積塵嚴重可能導致冷卻效能下降 40%。" }
-                ],
-                chunksCount: 12,
-                createdAt: '2026-10-12'
             }
         ];
 
         let supabaseClient = null;
         let dbDocs = loadDocsFromStorage();
-        let selectedDocId = 'all'; // 'all' or specific document ID
+        let selectedDocId = 'all';
 
-        // Initialize Supabase Client if keys exist in localStorage
+        /**
+         * Convert HTML <table> elements inside a DOM document into structured Markdown tables
+         * so table columns and row relationships are perfectly preserved.
+         */
+        function convertTablesToMarkdown(doc) {
+            const tables = doc.querySelectorAll('table');
+            tables.forEach(table => {
+                let mdLines = [];
+                const rows = table.querySelectorAll('tr');
+
+                rows.forEach((row, rowIndex) => {
+                    const cells = row.querySelectorAll('th, td');
+                    if (cells.length === 0) return;
+
+                    const cellTexts = Array.from(cells).map(cell => {
+                        return cell.innerText.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim() || '-';
+                    });
+                    
+                    mdLines.push('| ' + cellTexts.join(' | ') + ' |');
+
+                    // If it's the first row, insert Markdown separator bar
+                    if (rowIndex === 0) {
+                        const separators = cellTexts.map(() => '---');
+                        mdLines.push('| ' + separators.join(' | ') + ' |');
+                    }
+                });
+
+                if (mdLines.length > 0) {
+                    const markdownTableString = '\n\n' + mdLines.join('\n') + '\n\n';
+                    const replacementNode = doc.createElement('div');
+                    replacementNode.innerText = markdownTableString;
+                    if (table.parentNode) {
+                        table.parentNode.replaceChild(replacementNode, table);
+                    }
+                }
+            });
+        }
+
+        /**
+         * Extract structured plain text from DOM while keeping paragraphs and table lines intact
+         */
+        function extractStructuredTextFromDom(doc) {
+            // 1. Convert tables to Markdown
+            convertTablesToMarkdown(doc);
+
+            // 2. Remove scripts, styles, metadata and non-content tags
+            doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript, svg, style').forEach(el => el.remove());
+
+            // 3. Add line breaks to block-level elements
+            doc.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, tr, br, section, article').forEach(el => {
+                el.after(doc.createTextNode('\n'));
+            });
+
+            // 4. Extract text line by line to preserve row structures
+            const rawText = doc.body?.innerText || doc.textContent || '';
+            const cleanLines = rawText
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+
+            return cleanLines.join('\n');
+        }
+
         function initSupabase() {
             const url = localStorage.getItem('kb_supabase_url');
             const key = localStorage.getItem('kb_supabase_key');
@@ -336,10 +384,8 @@
                         statusElem.className = "text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1";
                         statusElem.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span> Supabase 資料庫已實體連線`;
                     }
-                    
                     document.getElementById('supabaseUrl').value = url;
                     document.getElementById('supabaseKey').value = key;
-
                     fetchDocumentsFromSupabase();
                 } catch (err) {
                     console.error("Supabase client init error:", err);
@@ -347,7 +393,6 @@
             }
         }
 
-        // Fetch document list from Supabase `documents` table
         async function fetchDocumentsFromSupabase() {
             if (!supabaseClient) return;
             try {
@@ -375,20 +420,15 @@
                 localStorage.setItem('kb_persisted_docs', JSON.stringify(DEFAULT_PERSISTED_DOCS));
                 return DEFAULT_PERSISTED_DOCS;
             }
-            try {
-                return JSON.parse(stored);
-            } catch (e) {
-                return DEFAULT_PERSISTED_DOCS;
-            }
+            try { return JSON.parse(stored); } 
+            catch (e) { return DEFAULT_PERSISTED_DOCS; }
         }
 
-        // Render Persisted File Badges
         function renderFileList() {
             const container = document.getElementById('fileList');
             if (!container) return;
             container.innerHTML = '';
 
-            // 'All' Filter Pill
             const allPill = document.createElement('button');
             allPill.className = `px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 border transition ${
                 selectedDocId === 'all' 
@@ -399,7 +439,6 @@
             allPill.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> 搜尋全部庫 (All)`;
             container.appendChild(allPill);
 
-            // Individual Document Pills
             dbDocs.forEach(doc => {
                 const isSelected = selectedDocId === doc.id;
                 const pill = document.createElement('div');
@@ -444,7 +483,6 @@
             showToast("已從知識庫移除該項目");
         }
 
-        // Modal Control Handlers
         function openUrlModal() { document.getElementById('urlModal').classList.remove('hidden'); }
         function closeUrlModal() { document.getElementById('urlModal').classList.add('hidden'); }
         function openYtModal() { document.getElementById('ytModal').classList.remove('hidden'); }
@@ -452,7 +490,6 @@
         function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
         function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
 
-        // Multi-Channel Webpage Content Fetcher (Bypasses CORS & Anti-Bot Protection)
         async function fetchWebpageContent() {
             const urlInput = document.getElementById('webpageUrl');
             const titleInput = document.getElementById('webpageTitle');
@@ -467,12 +504,12 @@
             const btn = document.getElementById('btnFetchUrl');
             btn.disabled = true;
             btn.classList.add('opacity-50');
-            showToast("正在啟動智慧多通道解析網頁...");
-            contentInput.value = "▶ 正在發起多通道網頁抓取，請稍候...\n";
+            showToast("正在啟動智慧多通道解析網頁與表格...");
+            contentInput.value = "▶ 正在發起多通道網頁與 HTML 表格抓取，請稍候...\n";
 
-            // Channel 1: Jina AI Reader (Best for JS SPA, Markdown formatting & Cloudflare pass-through)
+            // Channel 1: Jina AI Reader Engine
             try {
-                contentInput.value += "> 嘗試通道 1: Jina AI Reader Engine...\n";
+                contentInput.value += "> 嘗試通道 1: Jina AI Reader Engine (自動將 HTML 轉 Markdown 表格)...\n";
                 const jinaUrl = `https://r.jina.ai/${url}`;
                 const res1 = await fetch(jinaUrl, { headers: { 'Accept': 'text/plain' } });
                 if (res1.ok) {
@@ -491,7 +528,7 @@
 
                         if (cleanText.length > 50) {
                             contentInput.value = cleanText;
-                            showToast("網頁內容 (通道 1: Jina Engine) 抓取成功！");
+                            showToast("網頁與表格 (通道 1: Jina Engine) 抓取成功！");
                             resetFetchButton();
                             return;
                         }
@@ -501,9 +538,9 @@
                 console.warn("Channel 1 (Jina) failed:", err1);
             }
 
-            // Channel 2: AllOrigins JSON Proxy
+            // Channel 2: AllOrigins CORS Proxy + DOM Table Parser
             try {
-                contentInput.value += "> 通道 1 受到保護，嘗試通道 2: AllOrigins CORS Proxy...\n";
+                contentInput.value += "> 通道 1 受到保護，嘗試通道 2: AllOrigins + 表格轉譯器...\n";
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                 const res2 = await fetch(proxyUrl);
                 const data2 = await res2.json();
@@ -513,17 +550,12 @@
                     const doc = parser.parseFromString(data2.contents, 'text/html');
                     
                     const title = doc.querySelector('title')?.innerText || '';
-                    if (title && !titleInput.value) {
-                        titleInput.value = title.trim();
-                    }
-                    
-                    doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript').forEach(el => el.remove());
-                    const text = doc.body?.innerText || doc.textContent || '';
-                    const cleanText = text.replace(/\s+/g, ' ').trim();
-                    
-                    if (cleanText && cleanText.length > 50) {
-                        contentInput.value = cleanText;
-                        showToast("網頁內容 (通道 2) 抓取成功！");
+                    if (title && !titleInput.value) titleInput.value = title.trim();
+
+                    const structuredText = extractStructuredTextFromDom(doc);
+                    if (structuredText && structuredText.length > 50) {
+                        contentInput.value = structuredText;
+                        showToast("網頁與表格 (通道 2) 抓取成功！");
                         resetFetchButton();
                         return;
                     }
@@ -532,9 +564,9 @@
                 console.warn("Channel 2 (AllOrigins) failed:", err2);
             }
 
-            // Channel 3: CorsProxy.io Proxy
+            // Channel 3: CorsProxy Engine + DOM Table Parser
             try {
-                contentInput.value += "> 通道 2 未回應，嘗試通道 3: CorsProxy Engine...\n";
+                contentInput.value += "> 嘗試通道 3: CorsProxy Engine + 表格轉譯器...\n";
                 const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
                 const res3 = await fetch(corsProxyUrl);
                 if (res3.ok) {
@@ -543,17 +575,12 @@
                     const doc = parser.parseFromString(htmlText, 'text/html');
                     
                     const title = doc.querySelector('title')?.innerText || '';
-                    if (title && !titleInput.value) {
-                        titleInput.value = title.trim();
-                    }
-                    
-                    doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript').forEach(el => el.remove());
-                    const text = doc.body?.innerText || doc.textContent || '';
-                    const cleanText = text.replace(/\s+/g, ' ').trim();
-                    
-                    if (cleanText && cleanText.length > 50) {
-                        contentInput.value = cleanText;
-                        showToast("網頁內容 (通道 3) 抓取成功！");
+                    if (title && !titleInput.value) titleInput.value = title.trim();
+
+                    const structuredText = extractStructuredTextFromDom(doc);
+                    if (structuredText && structuredText.length > 50) {
+                        contentInput.value = structuredText;
+                        showToast("網頁與表格 (通道 3) 抓取成功！");
                         resetFetchButton();
                         return;
                     }
@@ -562,15 +589,14 @@
                 console.warn("Channel 3 (CorsProxy) failed:", err3);
             }
 
-            // Fallback instruction if all 3 automated channels are blocked by Cloudflare/Login requirement
-            contentInput.value = `[網頁自動抓取受阻說明]\n` +
-                `目標網頁設有嚴密之 Cloudflare 人機驗證、帳號登入限制或動態圖形防火牆。\n\n` +
+            contentInput.value = `[網頁自動抓取說明]\n` +
+                `目標網頁設有 Cloudflare 人機驗證、帳號登入限制或動態阻擋。\n\n` +
                 `💡 建議解決方案：\n` +
                 `1. 請直接開啟目標網址：${url}\n` +
-                `2. 在瀏覽器中複製文章內文。\n` +
-                `3. 清除本文字方塊，直接「貼上內文」後點擊右下角【存入持久化知識庫】即可！`;
+                `2. 複製網頁上的文章或直接全選表格。\n` +
+                `3. 清除本文字方塊，直接「貼上表格文字」後點擊右下角【存入持久化知識庫】！`;
 
-            showToast("自動抓取受阻（該網站設有防火牆），請直接複製貼上網頁文章內文。");
+            showToast("自動抓取受阻，請直接複製貼上網頁文章或表格。");
             resetFetchButton();
         }
 
@@ -584,15 +610,15 @@
 
         async function saveWebpageDoc() {
             const url = document.getElementById('webpageUrl').value.trim() || '#';
-            const title = document.getElementById('webpageTitle').value.trim() || '網頁文章 (' + new Date().toLocaleDateString() + ')';
+            const title = document.getElementById('webpageTitle').value.trim() || '網頁表格文章 (' + new Date().toLocaleDateString() + ')';
             const content = document.getElementById('webpageContent').value.trim();
 
-            if (!content || content.startsWith('[網頁自動抓取受阻說明]')) {
-                showToast("請先輸入或貼上有效的網頁文章內文");
+            if (!content || content.startsWith('[網頁自動抓取說明]')) {
+                showToast("請先輸入或貼上有效的網頁文章或表格內容");
                 return;
             }
 
-            const chunkSize = 400;
+            const chunkSize = 500;
             let pages = [];
             for (let i = 0; i < content.length; i += chunkSize) {
                 pages.push({
@@ -636,7 +662,7 @@
             document.getElementById('webpageUrl').value = '';
             document.getElementById('webpageContent').value = '';
 
-            showToast(`網頁《${title}》已成功存入知識庫！`);
+            showToast(`網頁表格《${title}》已成功存入知識庫！`);
         }
 
         function extractYouTubeId(url) {
@@ -787,7 +813,6 @@
             input.value = '';
             const chatMessages = document.getElementById('chatMessages');
 
-            // Render user question
             chatMessages.innerHTML += `
                 <div class="flex gap-3 text-sm justify-end">
                     <div class="bg-indigo-600 text-white rounded-xl p-3.5 max-w-[85%] leading-relaxed shadow-sm">
@@ -799,7 +824,6 @@
                 </div>
             `;
 
-            // Render loader indicator
             const aiLoaderId = 'ai-loader-' + Date.now();
             chatMessages.innerHTML += `
                 <div id="${aiLoaderId}" class="flex gap-3 text-sm">
@@ -808,7 +832,7 @@
                     </div>
                     <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-400 flex items-center gap-2">
                         <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
-                        <span>智慧檢索分析中...</span>
+                        <span>智慧檢索分析表格與文件內容中...</span>
                     </div>
                 </div>
             `;
@@ -833,16 +857,16 @@
                                 if (doc.type === 'youtube' || doc.type === 'video') {
                                     docContext += `[時間: ${p.sec || 0} 秒] ${p.text}\n`;
                                 } else {
-                                    docContext += `[第 ${p.page} 頁/區塊] ${p.text}\n`;
+                                    docContext += `[第 ${p.page} 頁/表格區塊] ${p.text}\n`;
                                 }
                             });
                         }
                     });
 
-                    const systemPrompt = `你是一個嚴謹的多模態與網頁知識庫問答助理。請完全根據提供資料回答。
+                    const systemPrompt = `你是一個嚴謹的多模態與表格資料問答助理。請完全根據提供資料（包含 Markdown 表格數據）回答。
 如果找不到答案，請回答：「根據目前的知識庫資料，找不到相關資訊。」
 請引述出處標記：
-- PDF或網頁段落標記：[[PAGE:doc_id:page_number]]
+- PDF或網頁表格段落標記：[[PAGE:doc_id:page_number]]
 - 影片時間軸標記：[[SEEK:doc_id:seconds]]
 - YouTube 時間軸標記：[[YT:doc_id:seconds]]`;
 
@@ -853,7 +877,7 @@
                             contents: [{
                                 parts: [
                                     { text: systemPrompt },
-                                    { text: `【資料庫內文】：\n${docContext.substring(0, 30000)}` },
+                                    { text: `【資料庫內文與表格數據】：\n${docContext.substring(0, 30000)}` },
                                     { text: `【使用者問題】：${q}` }
                                 ]
                             }]
@@ -866,7 +890,7 @@
                     responseHTML = rawText
                         .replace(/\[\[PAGE:(.*?):(.*?)]\]/g, (match, docId, pageNum) => {
                             return `<button onclick="seekToDoc('${docId}', ${pageNum})" class="inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono hover:bg-emerald-500/30 transition my-0.5">
-                                <i data-lucide="file-text" class="w-3 h-3"></i> 查看出處段落 (${pageNum})
+                                <i data-lucide="file-text" class="w-3 h-3"></i> 查看表格/出處段落 (${pageNum})
                             </button>`;
                         })
                         .replace(/\[\[SEEK:(.*?):(.*?)]\]/g, (match, docId, sec) => {
@@ -904,13 +928,13 @@
                     matches.sort((a, b) => b.score - a.score);
 
                     if (matches.length > 0) {
-                        responseHTML = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的段落如下：<br><br>`;
+                        responseHTML = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的表格或段落如下：<br><br>`;
                         matches.slice(0, 3).forEach((m) => {
                             let snippet = m.text;
                             queryKeywords.forEach(kw => {
                                 snippet = snippet.replaceAll(kw, `<mark class="bg-amber-500/30 text-amber-200 px-0.5 rounded">${kw}</mark>`);
                             });
-                            if (snippet.length > 200) snippet = snippet.substring(0, 200) + '...';
+                            if (snippet.length > 300) snippet = snippet.substring(0, 300) + '...';
 
                             let btnHTML = '';
                             if (m.doc.type === 'youtube') {
@@ -920,7 +944,7 @@
                                 </button>`;
                             } else if (m.doc.type === 'webpage') {
                                 btnHTML = `<button onclick="seekToDoc('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded transition hover:bg-emerald-500/30">
-                                    <i data-lucide="globe" class="w-3 h-3"></i> 網頁段落
+                                    <i data-lucide="globe" class="w-3 h-3"></i> 網頁與表格段落
                                 </button>`;
                             } else if (m.doc.type === 'video') {
                                 btnHTML = `<button onclick="seekToVideo('${m.doc.id}', ${m.sec || 0})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded transition hover:bg-amber-500/30">
@@ -938,13 +962,13 @@
                                         <span class="truncate max-w-[200px]">${escapeHtml(m.doc.title)}</span>
                                         ${btnHTML}
                                     </div>
-                                    <div class="text-slate-400">${snippet}</div>
+                                    <div class="text-slate-400 whitespace-pre-wrap font-mono bg-slate-950 p-2 rounded border border-slate-800">${snippet}</div>
                                 </div>
                             `;
                         });
-                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：可於設定中填入 Gemini API Key 進行智慧總結提練。</div>`;
+                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：可於設定中填入 Gemini API Key，AI 將會幫您進行表格數值的自動加總與交叉比較。</div>`;
                     } else {
-                        responseHTML = `在目前的檔案庫（如《${targetDocs[0]?.title || '知識庫'}》）中，未能找到包含與「<strong>${escapeHtml(q)}</strong>」相關的段落內容。`;
+                        responseHTML = `在目前的檔案庫（如《${targetDocs[0]?.title || '知識庫'}》）中，未能找到包含與「<strong>${escapeHtml(q)}</strong>」相關的表格或段落內容。`;
                     }
                 }
             } catch (err) {
@@ -990,7 +1014,7 @@
                 docExternalLink.href = doc.url;
                 docExternalLink.classList.remove('hidden');
                 docExternalLink.classList.add('inline-flex');
-                docPageIndicator.innerText = `網頁區塊 ${pageNum}`;
+                docPageIndicator.innerText = `網頁/表格區塊 ${pageNum}`;
             } else {
                 docExternalLink.classList.add('hidden');
                 docPageIndicator.innerText = `第 ${pageNum} 頁`;
@@ -1001,14 +1025,14 @@
                     <div class="p-4 rounded-lg border ${p.page === pageNum ? 'bg-emerald-950/40 border-emerald-500/50 ring-1 ring-emerald-500/30' : 'bg-slate-950 border-slate-800'} transition">
                         <div class="text-xs font-mono text-slate-500 mb-2 flex justify-between">
                             <span>${doc.type === 'webpage' ? 'SECTION ' + p.page : 'PAGE ' + p.page}</span>
-                            ${p.page === pageNum ? '<span class="text-emerald-400 font-bold">● 引述標的段落</span>' : ''}
+                            ${p.page === pageNum ? '<span class="text-emerald-400 font-bold">● 引述標的表格段落</span>' : ''}
                         </div>
-                        <p class="text-slate-200 leading-relaxed">${escapeHtml(p.text)}</p>
+                        <div class="text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">${escapeHtml(p.text)}</div>
                     </div>
                 `).join('');
             }
 
-            document.getElementById('previewBadge').innerText = doc.type === 'webpage' ? `網頁: ${doc.title}` : `文件: ${doc.title}`;
+            document.getElementById('previewBadge').innerText = doc.type === 'webpage' ? `網頁表格: ${doc.title}` : `文件: ${doc.title}`;
         }
 
         function seekToVideo(docId, seconds) {
