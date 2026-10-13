@@ -193,15 +193,15 @@
                     <label class="block text-slate-400 mb-1">網頁 URL 網址</label>
                     <div class="flex gap-2">
                         <input type="url" id="webpageUrl" placeholder="https://example.com/article" class="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
-                        <button onclick="fetchWebpageContent()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded font-medium transition shrink-0 flex items-center gap-1">
+                        <button id="btnFetchUrl" onclick="fetchWebpageContent()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded font-medium transition shrink-0 flex items-center gap-1">
                             <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                            抓取網頁
+                            <span>抓取網頁</span>
                         </button>
                     </div>
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">網頁內文預覽 (亦可直接複製貼上文字內容)</label>
-                    <textarea id="webpageContent" rows="5" placeholder="點擊「抓取網頁」後將在此顯示內文，或直接將網頁文章文字複製貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-sans leading-relaxed"></textarea>
+                    <textarea id="webpageContent" rows="6" placeholder="點擊「抓取網頁」後將在此顯示內文。&#10;&#10;💡 若網頁設有防火牆或登入限制致自動抓取受阻，可直接複製該網頁文章貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs leading-relaxed"></textarea>
                 </div>
             </div>
 
@@ -278,7 +278,7 @@
 
     <!-- Application JavaScript Logic -->
     <script>
-        // Mock Persistent Database State
+        // Default Mock Persistent Database State
         const DEFAULT_PERSISTED_DOCS = [
             {
                 id: 'doc-1',
@@ -452,39 +452,133 @@
         function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
         function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
 
+        // Multi-Channel Webpage Content Fetcher (Bypasses CORS & Anti-Bot Protection)
         async function fetchWebpageContent() {
-            const url = document.getElementById('webpageUrl').value.trim();
-            if (!url) {
-                showToast("請輸入有效的網頁 URL");
+            const urlInput = document.getElementById('webpageUrl');
+            const titleInput = document.getElementById('webpageTitle');
+            const contentInput = document.getElementById('webpageContent');
+            const url = urlInput.value.trim();
+
+            if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+                showToast("請輸入完整的網頁 URL (須包含 http:// 或 https://)");
                 return;
             }
-            showToast("正在抓取網頁內容...");
+
+            const btn = document.getElementById('btnFetchUrl');
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            showToast("正在啟動智慧多通道解析網頁...");
+            contentInput.value = "▶ 正在發起多通道網頁抓取，請稍候...\n";
+
+            // Channel 1: Jina AI Reader (Best for JS SPA, Markdown formatting & Cloudflare pass-through)
             try {
+                contentInput.value += "> 嘗試通道 1: Jina AI Reader Engine...\n";
+                const jinaUrl = `https://r.jina.ai/${url}`;
+                const res1 = await fetch(jinaUrl, { headers: { 'Accept': 'text/plain' } });
+                if (res1.ok) {
+                    const text = await res1.text();
+                    if (text && text.trim().length > 80) {
+                        const titleMatch = text.match(/^Title:\s*(.+)$/m);
+                        if (titleMatch && titleMatch[1] && !titleInput.value) {
+                            titleInput.value = titleMatch[1].trim();
+                        }
+
+                        let cleanText = text
+                            .replace(/^Title:.*$/m, '')
+                            .replace(/^URL Source:.*$/m, '')
+                            .replace(/^Markdown Content:.*$/m, '')
+                            .trim();
+
+                        if (cleanText.length > 50) {
+                            contentInput.value = cleanText;
+                            showToast("網頁內容 (通道 1: Jina Engine) 抓取成功！");
+                            resetFetchButton();
+                            return;
+                        }
+                    }
+                }
+            } catch (err1) {
+                console.warn("Channel 1 (Jina) failed:", err1);
+            }
+
+            // Channel 2: AllOrigins JSON Proxy
+            try {
+                contentInput.value += "> 通道 1 受到保護，嘗試通道 2: AllOrigins CORS Proxy...\n";
                 const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                const res = await fetch(proxyUrl);
-                const data = await res.json();
+                const res2 = await fetch(proxyUrl);
+                const data2 = await res2.json();
                 
-                if (data && data.contents) {
+                if (data2 && data2.contents) {
                     const parser = new DOMParser();
-                    const doc = parser.parseFromString(data.contents, 'text/html');
+                    const doc = parser.parseFromString(data2.contents, 'text/html');
                     
                     const title = doc.querySelector('title')?.innerText || '';
-                    if (title && !document.getElementById('webpageTitle').value) {
-                        document.getElementById('webpageTitle').value = title.trim();
+                    if (title && !titleInput.value) {
+                        titleInput.value = title.trim();
                     }
                     
-                    doc.querySelectorAll('script, style, nav, footer, header, iframe').forEach(el => el.remove());
+                    doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript').forEach(el => el.remove());
                     const text = doc.body?.innerText || doc.textContent || '';
                     const cleanText = text.replace(/\s+/g, ' ').trim();
                     
-                    document.getElementById('webpageContent').value = cleanText || "抓取成功，但未能提取出內文，請手動貼上文字。";
-                    showToast("網頁內容抓取完成！");
-                } else {
-                    showToast("無法抓取網頁內容，請直接將文章複製貼上於下方。");
+                    if (cleanText && cleanText.length > 50) {
+                        contentInput.value = cleanText;
+                        showToast("網頁內容 (通道 2) 抓取成功！");
+                        resetFetchButton();
+                        return;
+                    }
                 }
-            } catch (err) {
-                console.warn("Fetch webpage error:", err);
-                showToast("抓取受阻，請手動複製網頁文章貼上於下方。");
+            } catch (err2) {
+                console.warn("Channel 2 (AllOrigins) failed:", err2);
+            }
+
+            // Channel 3: CorsProxy.io Proxy
+            try {
+                contentInput.value += "> 通道 2 未回應，嘗試通道 3: CorsProxy Engine...\n";
+                const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+                const res3 = await fetch(corsProxyUrl);
+                if (res3.ok) {
+                    const htmlText = await res3.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+                    
+                    const title = doc.querySelector('title')?.innerText || '';
+                    if (title && !titleInput.value) {
+                        titleInput.value = title.trim();
+                    }
+                    
+                    doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript').forEach(el => el.remove());
+                    const text = doc.body?.innerText || doc.textContent || '';
+                    const cleanText = text.replace(/\s+/g, ' ').trim();
+                    
+                    if (cleanText && cleanText.length > 50) {
+                        contentInput.value = cleanText;
+                        showToast("網頁內容 (通道 3) 抓取成功！");
+                        resetFetchButton();
+                        return;
+                    }
+                }
+            } catch (err3) {
+                console.warn("Channel 3 (CorsProxy) failed:", err3);
+            }
+
+            // Fallback instruction if all 3 automated channels are blocked by Cloudflare/Login requirement
+            contentInput.value = `[網頁自動抓取受阻說明]\n` +
+                `目標網頁設有嚴密之 Cloudflare 人機驗證、帳號登入限制或動態圖形防火牆。\n\n` +
+                `💡 建議解決方案：\n` +
+                `1. 請直接開啟目標網址：${url}\n` +
+                `2. 在瀏覽器中複製文章內文。\n` +
+                `3. 清除本文字方塊，直接「貼上內文」後點擊右下角【存入持久化知識庫】即可！`;
+
+            showToast("自動抓取受阻（該網站設有防火牆），請直接複製貼上網頁文章內文。");
+            resetFetchButton();
+        }
+
+        function resetFetchButton() {
+            const btn = document.getElementById('btnFetchUrl');
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
             }
         }
 
@@ -493,8 +587,8 @@
             const title = document.getElementById('webpageTitle').value.trim() || '網頁文章 (' + new Date().toLocaleDateString() + ')';
             const content = document.getElementById('webpageContent').value.trim();
 
-            if (!content) {
-                showToast("請輸入或抓取網頁文章內文");
+            if (!content || content.startsWith('[網頁自動抓取受阻說明]')) {
+                showToast("請先輸入或貼上有效的網頁文章內文");
                 return;
             }
 
@@ -984,7 +1078,7 @@
             const toast = document.getElementById('toastMessage');
             document.getElementById('toastText').innerText = msg;
             toast.classList.remove('hidden');
-            setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+            setTimeout(() => { toast.classList.add('hidden'); }, 3500);
         }
 
         function saveConfig() {
