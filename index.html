@@ -863,7 +863,7 @@
                         }
                     });
 
-                    const systemPrompt = `你是一個嚴謹的多模態與表格資料問答助理。請完全根據提供資料（包含 Markdown 表格數據）回答。
+                    const systemPrompt = `你是一個嚴謹的多模態與表格資料問答助理。請完全根據提供資料（包含 Markdown 表格數據與網頁內文）回答。
 如果找不到答案，請回答：「根據目前的知識庫資料，找不到相關資訊。」
 請引述出處標記：
 - PDF或網頁表格段落標記：[[PAGE:doc_id:page_number]]
@@ -906,20 +906,43 @@
                         .replace(/\n/g, '<br>');
 
                 } else {
-                    const queryKeywords = q.split(/[\s,，?？!！"']+/).filter(k => k.length > 0);
+                    // Smart Sub-keyword Extraction & Fuzzy Token Match
+                    function extractSubKeywords(queryStr) {
+                        let tokens = queryStr.split(/[\s,，?？!！"'「」\(\)（）\-\_\/]+/);
+                        let set = new Set();
+                        tokens.forEach(tok => {
+                            if (!tok) return;
+                            set.add(tok);
+                            if (tok.length >= 3) {
+                                // Extract 2-char and 3-char sub-keywords for fuzzy match
+                                for (let len = 2; len <= Math.min(3, tok.length - 1); len++) {
+                                    for (let i = 0; i <= tok.length - len; i++) {
+                                        let sub = tok.substring(i, i + len);
+                                        if (sub.length >= 2) set.add(sub);
+                                    }
+                                }
+                            }
+                        });
+                        return Array.from(set);
+                    }
+
+                    const queryKeywords = extractSubKeywords(q);
                     let matches = [];
 
                     targetDocs.forEach(doc => {
                         if (doc.pages) {
                             doc.pages.forEach(p => {
                                 let score = 0;
+                                let matchedKeys = [];
                                 queryKeywords.forEach(kw => {
                                     if (p.text.includes(kw)) {
-                                        score += (kw.length > 1 ? 3 : 1);
+                                        let weight = (kw.length >= 4) ? 5 : (kw.length === 3 ? 3 : 1);
+                                        score += weight;
+                                        matchedKeys.push(kw);
                                     }
                                 });
                                 if (score > 0) {
-                                    matches.push({ doc, page: p.page, text: p.text, sec: p.sec || 0, score });
+                                    matches.push({ doc, page: p.page, text: p.text, sec: p.sec || 0, score, matchedKeys });
                                 }
                             });
                         }
@@ -928,10 +951,10 @@
                     matches.sort((a, b) => b.score - a.score);
 
                     if (matches.length > 0) {
-                        responseHTML = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的表格或段落如下：<br><br>`;
+                        responseHTML = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的內容如下：<br><br>`;
                         matches.slice(0, 3).forEach((m) => {
                             let snippet = m.text;
-                            queryKeywords.forEach(kw => {
+                            m.matchedKeys.forEach(kw => {
                                 snippet = snippet.replaceAll(kw, `<mark class="bg-amber-500/30 text-amber-200 px-0.5 rounded">${kw}</mark>`);
                             });
                             if (snippet.length > 300) snippet = snippet.substring(0, 300) + '...';
@@ -966,9 +989,15 @@
                                 </div>
                             `;
                         });
-                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：可於設定中填入 Gemini API Key，AI 將會幫您進行表格數值的自動加總與交叉比較。</div>`;
+                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：若需更自然語義的整合回答，建議於設定中填入 Gemini API Key。</div>`;
                     } else {
-                        responseHTML = `在目前的檔案庫（如《${targetDocs[0]?.title || '知識庫'}》）中，未能找到包含與「<strong>${escapeHtml(q)}</strong>」相關的表格或段落內容。`;
+                        responseHTML = `在目前的檔案庫（如《${targetDocs[0]?.title || '知識庫'}》）中，未能精確匹配到包含與「<strong>${escapeHtml(q)}</strong>」相關的關鍵字。<br><br>` +
+                            `<div class="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs leading-relaxed">` +
+                            `💡 <strong>搜尋排錯建議：</strong><br>` +
+                            `1. 請嘗試輸入更簡短的關鍵字（如「第一階段」或「公費」）。<br>` +
+                            `2. 點擊頂部《${targetDocs[0]?.title || '檔案'}》確認當初自動抓取的內容是否完整。若為動態網頁，可重新點擊【新增網頁 URL】將網頁上的對象表格直接複製貼上。<br>` +
+                            `3. 設定 Gemini API Key 後可啟動同義詞與長文自然語言推導搜尋。` +
+                            `</div>`;
                     }
                 }
             } catch (err) {
