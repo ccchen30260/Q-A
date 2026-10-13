@@ -10,6 +10,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- PDF.js Engine for Client-Side PDF Text Extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
     <style>
         /* Custom scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -160,7 +165,7 @@
                     <input type="password" id="supabaseKey" placeholder="your-anon-key" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，展示模式會使用模擬回答)</label>
+                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，填入後可啟用 Gemini AI 智慧分析與回答)</label>
                     <input type="password" id="geminiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
@@ -347,17 +352,34 @@
 
             let filePublicUrl = (isVideo || isAudio) ? URL.createObjectURL(file) : '';
             let extractedPages = [];
-            let uploadDbSuccess = false;
 
             try {
-                // 1. Client-side reading for text or default structure
-                if (!isVideo && !isAudio) {
+                // 1. Client-side reading for PDF / Text files using PDF.js
+                if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+                    const statusText = document.getElementById(`${loaderId}-text`);
+                    if (statusText) statusText.innerText = "正在讀取並解析 PDF 頁面文字內容...";
+
+                    try {
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        for (let i = 1; i <= pdfDoc.numPages; i++) {
+                            const page = await pdfDoc.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
+                            if (pageText) {
+                                extractedPages.push({ page: i, text: pageText });
+                            }
+                        }
+                    } catch (pdfErr) {
+                        console.warn("PDF.js extraction error:", pdfErr);
+                    }
+                } else if (!isVideo && !isAudio) {
                     try {
                         const textContent = await file.text();
                         if (textContent && textContent.trim().length > 0) {
                             extractedPages = [
-                                { page: 1, text: textContent.substring(0, 400) },
-                                { page: 2, text: textContent.substring(400, 800) || "【後續內容】切片向量化索引完成..." }
+                                { page: 1, text: textContent.substring(0, 800) },
+                                { page: 2, text: textContent.substring(800, 1600) || "【內文已完整索引】" }
                             ];
                         }
                     } catch (readErr) {
@@ -367,8 +389,7 @@
 
                 if (extractedPages.length === 0) {
                     extractedPages = [
-                        { page: 1, text: `【解析結果】檔案 ${file.name} 內容已成功進行向量切片與全文索引。` },
-                        { page: 2, text: `【詳細紀錄】設備與系統操作參數已安全存入知識庫資料表中。` }
+                        { page: 1, text: `【解析結果】檔案 ${file.name} 內容已成功進行向量切片與全文索引。` }
                     ];
                 }
 
@@ -381,94 +402,121 @@
                         const cleanFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
                         const filePath = `uploads/${Date.now()}_${cleanFileName}`;
 
-                        const { data: uploadData, error: uploadError } = await supabaseClient
-                            .storage
+                        const { data: uploadData, error: uploadErr } = await supabaseClient.storage
                             .from('knowledge_base')
-                            .upload(filePath, file, { upsert: true });
+                            .upload(filePath, file);
 
-                        if (uploadError) {
-                            console.warn("Supabase Storage Upload Warning:", uploadError.message);
-                        } else if (uploadData) {
-                            const { data: publicUrlData } = supabaseClient
-                                .storage
+                        if (!uploadErr && uploadData) {
+                            const { data: urlData } = supabaseClient.storage
                                 .from('knowledge_base')
                                 .getPublicUrl(filePath);
-                            
-                            if (publicUrlData && publicUrlData.publicUrl) {
-                                filePublicUrl = publicUrlData.publicUrl;
+                            if (urlData?.publicUrl) {
+                                filePublicUrl = urlData.publicUrl;
                             }
                         }
-                    } catch (stgErr) {
-                        console.warn("Supabase Storage step failed, fallback to local URL:", stgErr);
-                    }
-
-                    // Write to DB table
-                    try {
-                        const { data: insertData, error: dbError } = await supabaseClient
-                            .from('documents')
-                            .insert([{
-                                title: file.name,
-                                file_type: isVideo ? 'video' : 'pdf',
-                                file_url: filePublicUrl || 'local_blob',
-                                metadata: { pages: extractedPages, chunks_count: 6 }
-                            }])
-                            .select();
-
-                        if (!dbError && insertData && insertData.length > 0) {
-                            uploadDbSuccess = true;
-                        } else if (dbError) {
-                            console.warn("Supabase DB Insert Error:", dbError.message);
-                        }
-                    } catch (dbErr) {
-                        console.warn("Supabase DB insert step failed:", dbErr);
+                    } catch (storageErr) {
+                        console.warn("Supabase Storage upload warning:", storageErr);
                     }
                 }
 
-                // Local State Persistence
+                // Create document object
                 const newDocId = 'doc-' + Date.now();
                 const newDoc = {
                     id: newDocId,
                     title: file.name,
                     type: isVideo ? 'video' : 'pdf',
-                    url: filePublicUrl || URL.createObjectURL(file),
+                    url: filePublicUrl || (isVideo ? URL.createObjectURL(file) : ''),
                     pages: extractedPages,
-                    chunksCount: 6,
+                    chunksCount: extractedPages.length || 1,
                     createdAt: new Date().toISOString().split('T')[0]
                 };
 
-                dbDocs.push(newDoc);
+                // Store in Supabase DB if client is connected
+                if (supabaseClient) {
+                    try {
+                        const { data: docData, error: docErr } = await supabaseClient
+                            .from('documents')
+                            .insert([{
+                                id: newDocId,
+                                title: file.name,
+                                file_type: isVideo ? 'video' : 'pdf',
+                                file_url: filePublicUrl,
+                                metadata: { pages: extractedPages, chunks_count: extractedPages.length }
+                            }])
+                            .select();
+
+                        const geminiApiKey = localStorage.getItem('kb_gemini_key') || document.getElementById('geminiKey')?.value;
+                        if (!docErr && geminiApiKey && extractedPages.length > 0) {
+                            for (let i = 0; i < extractedPages.length; i++) {
+                                const p = extractedPages[i];
+                                try {
+                                    const embRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiApiKey}`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            model: "models/text-embedding-004",
+                                            content: { parts: [{ text: p.text }] }
+                                        })
+                                    });
+                                    const embData = await embRes.json();
+                                    const embeddingValues = embData.embedding?.values;
+                                    if (embeddingValues) {
+                                        await supabaseClient.from('document_chunks').insert([{
+                                            document_id: newDocId,
+                                            chunk_index: i,
+                                            content: p.text,
+                                            embedding: embeddingValues,
+                                            metadata: { page_number: p.page }
+                                        }]);
+                                    }
+                                } catch (embErr) {
+                                    console.warn("Embedding generation error:", embErr);
+                                }
+                            }
+                        }
+                    } catch (dbErr) {
+                        console.warn("Supabase DB insert warning:", dbErr);
+                    }
+                }
+
+                dbDocs.unshift(newDoc);
                 localStorage.setItem('kb_persisted_docs', JSON.stringify(dbDocs));
+                selectedDocId = newDocId;
                 renderFileList();
 
-                // Clear Loader Message
                 const loaderElem = document.getElementById(loaderId);
-                if (loaderElem) loaderElem.remove();
+                if (loaderElem) {
+                    loaderElem.className = "flex gap-2 text-xs text-emerald-400 items-center my-2 p-2.5 bg-emerald-950/40 rounded-lg border border-emerald-800/40";
+                    loaderElem.innerHTML = `
+                        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+                        <div class="flex-1">
+                            <div class="font-medium text-slate-200">檔案《${escapeHtml(file.name)}》索引完成</div>
+                            <div class="text-[11px] text-emerald-300/70">已成功擷取文字並存入持久化知識庫，現在可針對此檔案提問！</div>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                }
 
-                chatMessages.innerHTML += `
-                    <div class="flex gap-2 text-xs text-emerald-400 items-center my-2 p-2.5 bg-emerald-950/40 rounded-lg border border-emerald-800/40">
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0"></i>
-                        <span>檔案 <strong>${escapeHtml(file.name)}</strong> 已完成解析與向量儲存！可隨時對此檔案提問。</span>
-                    </div>
-                `;
             } catch (err) {
-                console.error("Critical upload error:", err);
+                console.error("File processing error:", err);
                 const loaderElem = document.getElementById(loaderId);
-                if (loaderElem) loaderElem.remove();
-
-                chatMessages.innerHTML += `
-                    <div class="flex gap-2 text-xs text-rose-400 items-center my-2 p-2.5 bg-rose-950/40 rounded-lg border border-rose-800/40">
+                if (loaderElem) {
+                    loaderElem.className = "flex gap-2 text-xs text-rose-400 items-center my-2 p-2.5 bg-rose-950/40 rounded-lg border border-rose-800/40";
+                    loaderElem.innerHTML = `
                         <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i>
-                        <span>解析處理出現問題：${escapeHtml(err.message || '檔案無法讀取')}。已保留檔案記錄。</span>
-                    </div>
-                `;
+                        <div class="flex-1">
+                            <div class="font-medium text-slate-200">檔案處理提示</div>
+                            <div class="text-[11px] text-rose-300/70">處理過程中發生錯誤: ${escapeHtml(err.message)}</div>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                }
             } finally {
-                fileInput.value = ''; // Reset input to allow re-uploading
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-                lucide.createIcons();
+                fileInput.value = '';
             }
         }
 
-        // Handle User Query (Queries Supabase `match_chunks` or local mock)
+        // Handle User Query (Queries Real Document Content or Gemini API)
         async function handleSendQuestion(e) {
             e.preventDefault();
             const input = document.getElementById('userInput');
@@ -488,54 +536,141 @@
             input.value = '';
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
+            // Loading indicator for AI search
+            const aiLoaderId = 'aiLoader-' + Date.now();
+            chatMessages.innerHTML += `
+                <div id="${aiLoaderId}" class="flex gap-3 text-sm">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4"></i>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-400 flex items-center gap-2">
+                        <i data-lucide="loader" class="w-4 h-4 animate-spin text-indigo-400"></i>
+                        <span>正在檢索持久化知識庫與比對內文...</span>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            const geminiApiKey = localStorage.getItem('kb_gemini_key') || document.getElementById('geminiKey')?.value;
+
+            // Filter relevant documents
+            const targetDocs = selectedDocId === 'all' 
+                ? dbDocs 
+                : dbDocs.filter(d => d.id === selectedDocId);
+
             let responseHTML = "";
 
-            // If Supabase Client is initialized, try searching via Supabase RPC
-            if (supabaseClient) {
-                try {
-                    // Simulating generating embedding & calling match_chunks function
-                    console.log("Querying Supabase match_chunks RPC for:", q);
-                } catch (err) {
-                    console.warn("RPC query error, fallback to local match:", err);
-                }
-            }
+            try {
+                // If Gemini API Key is provided, call Gemini 1.5 Flash API with extracted PDF/doc context
+                if (geminiApiKey) {
+                    let docContext = "";
+                    targetDocs.forEach(d => {
+                        docContext += `\n=== 檔案標題: ${d.title} (ID: ${d.id}, 類型: ${d.type}) ===\n`;
+                        if (d.pages && d.pages.length > 0) {
+                            d.pages.forEach(p => {
+                                docContext += `[頁碼: ${p.page}]\n${p.text}\n`;
+                            });
+                        }
+                    });
 
-            setTimeout(() => {
-                if (q.includes("保養") || q.includes("濾網")) {
-                    responseHTML = `
-                        根據 Supabase 資料庫中持久化的《2026產品操作手冊_v2.pdf》與維修影片記錄：<br><br>
-                        1. 濾網需要每 <strong>30 天</strong>定期清洗一次 
-                           <button onclick="seekToPdf('doc-2', 3)" class="inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-mono hover:bg-rose-500/30 transition">
-                               <i data-lucide="file-text" class="w-3 h-3"></i> PDF 第 3 頁
-                           </button><br>
-                        2. 若長期未清理，積塵將影響冷卻效能高達 40%。<br>
-                        3. 影片實作操作範例可參考說明：
-                           <button onclick="seekToVideo('doc-1', 15)" class="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono hover:bg-amber-500/30 transition">
-                               <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 00:15 秒處
-                           </button>
-                    `;
-                } else if (q.includes("電壓") || q.includes("規格") || q.includes("安全")) {
-                    responseHTML = `
-                        從庫中的 PDF 文件檢索到以下規格與安全注意事項：<br><br>
-                        • 系統標準額定電壓為 <strong>220V AC</strong> 
-                          <button onclick="seekToPdf('doc-2', 1)" class="inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-mono hover:bg-rose-500/30 transition">
-                              <i data-lucide="file-text" class="w-3 h-3"></i> PDF 第 1 頁
-                          </button><br>
-                        • 操作時請務必佩戴絕緣手套，遇到緊急情況請按紅色的 E-Stop 按鈕 
-                          <button onclick="seekToPdf('doc-2', 2)" class="inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-mono hover:bg-rose-500/30 transition">
-                              <i data-lucide="file-text" class="w-3 h-3"></i> PDF 第 2 頁
-                          </button>
-                    `;
+                    const systemPrompt = `你是一個嚴謹的多模態知識庫問答助理。請完全根據以下提供的【檔案資料庫內容】來回答使用者的問題。
+如果檔案內容中找不到答案，請明確回答：「根據目前的檔案內容，找不到相關資訊。」
+回答時若參考了某個頁面或影片，請使用以下標記語法引述出處：
+- PDF/文件頁碼標記：[[PAGE:doc_id:page_number]] (例如 [[PAGE:${targetDocs[0]?.id || 'doc-1'}:1]])
+- 影片秒數標記：[[SEEK:doc_id:seconds]] (例如 [[SEEK:doc-1:15]])`;
+
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: systemPrompt },
+                                    { text: `【檔案資料庫內容】：\n${docContext.substring(0, 30000)}` },
+                                    { text: `【使用者問題】：${q}` }
+                                ]
+                            }]
+                        })
+                    });
+
+                    const resultData = await res.json();
+                    let rawText = resultData.candidates?.[0]?.content?.parts?.[0]?.text || "無法從 AI 取得回答，請檢查 API Key 是否正確。";
+
+                    // Parse Gemini citation markers into clickable UI components
+                    responseHTML = rawText
+                        .replace(/\[\[PAGE:(.*?):(.*?)]\]/g, (match, docId, pageNum) => {
+                            return `<button onclick="seekToPdf('${docId}', ${pageNum})" class="inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-mono hover:bg-rose-500/30 transition my-0.5">
+                                <i data-lucide="file-text" class="w-3 h-3"></i> 第 ${pageNum} 頁
+                            </button>`;
+                        })
+                        .replace(/\[\[SEEK:(.*?):(.*?)]\]/g, (match, docId, sec) => {
+                            return `<button onclick="seekToVideo('${docId}', ${sec})" class="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono hover:bg-amber-500/30 transition my-0.5">
+                                <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 ${formatTime(sec)}
+                            </button>`;
+                        })
+                        .replace(/\n/g, '<br>');
+
                 } else {
-                    responseHTML = `
-                        已搜尋 Supabase 資料庫中的相關向量切片：<br><br>
-                        維修示範影片有介紹關於整體設備運作狀況，詳情請參考：
-                        <button onclick="seekToVideo('doc-1', 35)" class="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono hover:bg-amber-500/30 transition">
-                            <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 00:35 秒處
-                        </button>
-                    `;
-                }
+                    // Smart Local RAG Search across extracted text of uploaded PDFs / documents
+                    const queryKeywords = q.split(/[\s,，?？!！"']+/).filter(k => k.length > 0);
+                    let matches = [];
 
+                    targetDocs.forEach(doc => {
+                        if (doc.pages) {
+                            doc.pages.forEach(p => {
+                                let score = 0;
+                                queryKeywords.forEach(kw => {
+                                    if (p.text.includes(kw)) {
+                                        score += (kw.length > 1 ? 3 : 1);
+                                    }
+                                });
+                                if (score > 0) {
+                                    matches.push({ doc, page: p.page, text: p.text, score });
+                                }
+                            });
+                        }
+                    });
+
+                    // Sort by relevance score
+                    matches.sort((a, b) => b.score - a.score);
+
+                    if (matches.length > 0) {
+                        responseHTML = `在持久化檔案庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的段落如下：<br><br>`;
+                        matches.slice(0, 3).forEach((m, idx) => {
+                            // Snippet around match
+                            let snippet = m.text;
+                            queryKeywords.forEach(kw => {
+                                snippet = snippet.replaceAll(kw, `<mark class="bg-amber-500/30 text-amber-200 px-0.5 rounded">${kw}</mark>`);
+                            });
+                            if (snippet.length > 180) snippet = snippet.substring(0, 180) + '...';
+
+                            responseHTML += `
+                                <div class="mb-3 p-2.5 rounded-lg bg-slate-900/80 border border-slate-700/50 text-xs leading-relaxed">
+                                    <div class="font-medium text-slate-300 mb-1 flex items-center justify-between">
+                                        <span class="truncate">${escapeHtml(m.doc.title)}</span>
+                                        <button onclick="seekToPdf('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded hover:bg-rose-500/30 transition">
+                                            <i data-lucide="file-text" class="w-3 h-3"></i> 第 ${m.page} 頁
+                                        </button>
+                                    </div>
+                                    <div class="text-slate-400">${snippet}</div>
+                                </div>
+                            `;
+                        });
+                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：若需 AI 自動整合總結，可在右上角「API & Database 設定」填入 Gemini API Key。</div>`;
+                    } else {
+                        responseHTML = `在目前的已存檔案（如《${targetDocs[0]?.title || '檔案'}》）中，未能找到包含與「<strong>${escapeHtml(q)}</strong>」相關的段落內容。<br><br>請確認問題關鍵字，或確認檔案是否已完整讀取。`;
+                    }
+                }
+            } catch (err) {
+                console.error("Search error:", err);
+                responseHTML = `檢索過程中發生錯誤：${escapeHtml(err.message)}`;
+            } finally {
+                // Remove AI loader
+                const loaderElem = document.getElementById(aiLoaderId);
+                if (loaderElem) loaderElem.remove();
+
+                // Append Final Bot Message
                 chatMessages.innerHTML += `
                     <div class="flex gap-3 text-sm">
                         <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
@@ -548,7 +683,7 @@
                 `;
                 chatMessages.scrollTop = chatMessages.scrollHeight;
                 lucide.createIcons();
-            }, 500);
+            }
         }
 
         // Action: Jump to Video Timestamp in Right Viewer
