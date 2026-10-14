@@ -4,23 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多模態持久化知識庫問答系統</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Supabase JS Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- PDF.js Engine for Client-Side PDF Text Extraction -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <style>
-        /* Custom scrollbar styling */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .md-table { border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+        .md-table th, .md-table td { border: 1px solid #475569; padding: 4px 8px; }
+        .md-table th { background: #1e293b; }
     </style>
 </head>
 <body class="h-full flex flex-col font-sans overflow-hidden">
@@ -34,7 +32,7 @@
             <h1 class="font-bold text-lg text-slate-100">多模態持久化知識庫問答系統</h1>
             <span id="dbConnectionStatus" class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                展示模式 (連線 Supabase 可變實體庫)
+                本機模式 (可連線 Supabase)
             </span>
         </div>
         <div class="flex items-center space-x-2">
@@ -45,18 +43,16 @@
         </div>
     </header>
 
-    <!-- Main Container (Split Screen) -->
     <div class="flex-1 flex overflow-hidden">
-        
-        <!-- Left Panel: Document Library & Chat (Width: 50%) -->
+
+        <!-- Left Panel -->
         <div class="w-1/2 flex flex-col border-r border-slate-800 bg-slate-900/50">
-            
-            <!-- Knowledge Repository Bar (Persisted files) -->
+
             <div class="p-3 bg-slate-950/60 border-b border-slate-800">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <i data-lucide="folder-git-2" class="w-4 h-4 text-indigo-400"></i>
-                        已索引之持久化檔案庫 (網頁/表格 / 影片 / PDF / YouTube)
+                        已索引之持久化檔案庫
                     </span>
                     <div class="flex items-center gap-1.5">
                         <button onclick="openUrlModal()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm">
@@ -75,36 +71,26 @@
                     <input type="file" id="fileUploadInput" class="hidden" accept="video/*,audio/*,.pdf" onchange="handleFileUpload(event)">
                 </div>
 
-                <!-- Persisted Files Pills -->
-                <div id="fileList" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto pt-1">
-                    <!-- Dynamic rendering of files -->
-                </div>
+                <div id="fileList" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto pt-1"></div>
             </div>
 
-            <!-- Chat Area -->
             <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Welcome Message -->
                 <div class="flex gap-3 text-sm">
                     <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
                         <i data-lucide="bot" class="w-4 h-4"></i>
                     </div>
                     <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-200 max-w-[85%] leading-relaxed">
-                        歡迎使用多模態知識庫系統！現已完整支援<strong>「網頁表格 (HTML Table)、PDF 文件、影片、語音與 YouTube 影片」</strong>。
+                        歡迎使用多模態知識庫系統！支援<strong>網頁表格、PDF、影片、語音與 YouTube</strong>。
                         <br><br>
-                        抓取的網頁表格會自動轉換為 Markdown 數據表，您可以精準查詢表格中的數據資料！
+                        網頁表格會自動轉成 Markdown 數據表，可精準查詢。預設會搜尋<strong>全部檔案</strong>；若要只搜尋單一檔案，請點選上方該檔案。
                     </div>
                 </div>
             </div>
 
-            <!-- Chat Input Bar -->
             <div class="p-3 border-t border-slate-800 bg-slate-950">
                 <form onsubmit="handleSendQuestion(event)" class="flex gap-2">
-                    <input 
-                        type="text" 
-                        id="userInput" 
-                        placeholder="請輸入關於已儲存檔案或網頁表格的問題..." 
-                        class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-                    >
+                    <input type="text" id="userInput" placeholder="請輸入關於已儲存檔案或網頁表格的問題..."
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 shrink-0">
                         <span>發送</span>
                         <i data-lucide="send" class="w-4 h-4"></i>
@@ -113,9 +99,8 @@
             </div>
         </div>
 
-        <!-- Right Panel: Multi-Modal Previewer (Width: 50%) -->
+        <!-- Right Panel -->
         <div class="w-1/2 flex flex-col bg-slate-950">
-            <!-- Preview Header -->
             <div class="h-10 border-b border-slate-800 px-4 flex items-center justify-between bg-slate-900/80">
                 <span id="previewTitle" class="text-xs font-medium text-slate-300 flex items-center gap-2">
                     <i data-lucide="eye" class="w-4 h-4 text-indigo-400"></i>
@@ -124,28 +109,21 @@
                 <span id="previewBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">未載入內容</span>
             </div>
 
-            <!-- Viewer Container -->
             <div id="viewerContainer" class="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
-                <!-- Default Placeholder -->
                 <div id="emptyState" class="text-center text-slate-500">
                     <i data-lucide="file-search" class="w-12 h-12 mx-auto mb-3 text-slate-600 stroke-[1.5]"></i>
-                    <p class="text-sm">在左側問答中點擊出處連結 (例如 <span class="text-indigo-400 border border-indigo-500/30 px-1 py-0.5 rounded">01:25</span> 或 <span class="text-emerald-400 border border-emerald-500/30 px-1 py-0.5 rounded">網頁段落</span>)</p>
-                    <p class="text-xs text-slate-600 mt-1">此區將自動跳轉播放影片、導引至 PDF 特定頁面或顯示包含表格的網頁內文</p>
+                    <p class="text-sm">在左側問答中點擊出處按鈕 (例如 <span class="text-indigo-400 border border-indigo-500/30 px-1 py-0.5 rounded">01:25</span> 或 <span class="text-emerald-400 border border-emerald-500/30 px-1 py-0.5 rounded">網頁段落</span>)</p>
+                    <p class="text-xs text-slate-600 mt-1">此區將自動跳轉播放影片、導引至 PDF 特定頁面或顯示網頁內文</p>
                 </div>
 
-                <!-- Video Player Container -->
                 <div id="videoViewer" class="hidden w-full max-w-2xl flex-col items-center">
-                    <video id="mainVideoPlayer" controls class="w-full rounded-lg border border-slate-800 shadow-2xl bg-black">
-                        <source id="videoSource" src="" type="video/mp4">
-                        您的瀏覽器不支援影片播放。
-                    </video>
+                    <video id="mainVideoPlayer" controls class="w-full rounded-lg border border-slate-800 shadow-2xl bg-black"></video>
                     <div class="mt-3 w-full bg-slate-900 border border-slate-800 rounded-lg p-3 flex justify-between items-center text-xs">
                         <span class="text-slate-400">目前時間點: <strong id="videoCurrentTime" class="text-indigo-400 font-mono">00:00</strong></span>
                         <span class="text-slate-500">提示: 點擊問答標籤可控制 currentTime</span>
                     </div>
                 </div>
 
-                <!-- YouTube Player Container -->
                 <div id="youtubeViewer" class="hidden w-full max-w-2xl flex-col items-center">
                     <div class="relative w-full aspect-video rounded-lg overflow-hidden border border-slate-800 shadow-2xl bg-black">
                         <iframe id="mainYtPlayer" class="w-full h-full" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -156,34 +134,30 @@
                     </div>
                 </div>
 
-                <!-- PDF / Text / Webpage Doc Viewer -->
                 <div id="documentViewer" class="hidden w-full h-full flex flex-col bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
                     <div class="bg-slate-800 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs text-slate-300">
                         <div class="flex items-center gap-2">
                             <span id="docTitle" class="font-medium truncate max-w-[260px]">文件預覽</span>
-                            <a id="docExternalLink" href="#" target="_blank" class="hidden text-emerald-400 hover:text-emerald-300 items-center gap-1 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded text-[11px]">
+                            <a id="docExternalLink" href="#" target="_blank" rel="noopener" class="hidden text-emerald-400 hover:text-emerald-300 items-center gap-1 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded text-[11px]">
                                 <span>開啟原始網頁</span>
                                 <i data-lucide="external-link" class="w-3 h-3"></i>
                             </a>
                         </div>
                         <span id="docPageIndicator" class="bg-indigo-600/30 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30">第 1 頁</span>
                     </div>
-                    <div id="docContentArea" class="flex-1 p-6 overflow-y-auto space-y-4 font-sans text-slate-300 leading-relaxed text-sm whitespace-pre-wrap font-mono">
-                        <!-- Rendered Document Page/Section Chunks -->
-                    </div>
+                    <div id="docContentArea" class="flex-1 p-6 overflow-y-auto space-y-4 font-sans text-slate-300 leading-relaxed text-sm whitespace-pre-wrap font-mono"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Webpage URL Input Modal -->
+    <!-- Webpage URL Modal -->
     <div id="urlModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
                 <i data-lucide="globe" class="w-5 h-5 text-emerald-400"></i>
                 新增網頁/表格至知識庫
             </h3>
-            
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1">網頁標題 (選填，未填自動抓取)</label>
@@ -204,7 +178,6 @@
                     <textarea id="webpageContent" rows="7" placeholder="點擊「抓取網頁」後將在此顯示文章與轉換好的表格資料。&#10;&#10;💡 若網頁設有密碼或動態驗證，亦可手動複製表格文字貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs leading-relaxed"></textarea>
                 </div>
             </div>
-
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
                 <button onclick="closeUrlModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs">取消</button>
                 <button onclick="saveWebpageDoc()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium">存入持久化知識庫</button>
@@ -212,7 +185,7 @@
         </div>
     </div>
 
-    <!-- YouTube Input Modal -->
+    <!-- YouTube Modal -->
     <div id="ytModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-lg shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
@@ -230,7 +203,7 @@
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">影片逐字稿 / 字幕內容</label>
-                    <textarea id="ytTranscript" rows="5" placeholder="請將 YouTube 影片字幕貼上於此..." class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-red-500 font-sans leading-relaxed"></textarea>
+                    <textarea id="ytTranscript" rows="6" placeholder="請貼上字幕。建議每行以時間開頭，系統會用它精準定位，例如：&#10;00:12 大家好，今天介紹...&#10;01:25 接下來是第二個重點...&#10;&#10;若沒有時間標記，時間點只會是估算值。" class="w-full bg-slate-950 border border-slate-800 rounded p-3 text-slate-200 focus:outline-none focus:border-red-500 font-sans leading-relaxed"></textarea>
                 </div>
             </div>
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -240,7 +213,7 @@
         </div>
     </div>
 
-    <!-- Configuration Modal -->
+    <!-- Config Modal -->
     <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center hidden z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 w-full max-w-md shadow-2xl space-y-4">
             <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
@@ -257,8 +230,12 @@
                     <input type="password" id="supabaseKey" placeholder="your-anon-key" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，可進行表格數據總結提煉)</label>
+                    <label class="block text-slate-400 mb-1">Gemini API Key (選填，啟用自然語言回答)</label>
                     <input type="password" id="geminiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Gemini 模型名稱</label>
+                    <input type="text" id="geminiModel" placeholder="gemini-2.5-flash" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
             <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
@@ -268,15 +245,16 @@
         </div>
     </div>
 
-    <!-- Notification Toast Modal -->
     <div id="toastMessage" class="fixed bottom-5 right-5 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-2.5 rounded-lg shadow-2xl hidden z-50 text-xs flex items-center gap-2">
         <i data-lucide="info" class="w-4 h-4 text-indigo-400"></i>
         <span id="toastText">訊息提示</span>
     </div>
 
-    <!-- Application JavaScript Logic -->
     <script>
-        // Default Persistent Database State
+        // ===================== 常數與狀態 =====================
+        const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+        const GEMINI_CONTEXT_LIMIT = 60000;   // 送給 Gemini 的最大字元數 (依相關度挑選，而非硬截斷)
+
         const DEFAULT_PERSISTED_DOCS = [
             {
                 id: 'doc-demo-table',
@@ -284,9 +262,9 @@
                 type: 'webpage',
                 url: 'https://example.com/reports',
                 pages: [
-                    { 
-                        page: 1, 
-                        text: "【2026年第一季度各部門營收統計表】\n\n| 部門名稱 | 預算 (萬元) | 實際營收 (萬元) | 達成率 |\n| --- | --- | --- | --- |\n| 軟體開發部 | 500 | 620 | 124% |\n| 硬體設備部 | 800 | 750 | 93.7% |\n| 雲端服務部 | 350 | 480 | 137.1% |\n| 人力資源部 | 100 | 95 | 95.0% |" 
+                    {
+                        page: 1,
+                        text: "【2026年第一季度各部門營收統計表】\n\n| 部門名稱 | 預算 (萬元) | 實際營收 (萬元) | 達成率 |\n| --- | --- | --- | --- |\n| 軟體開發部 | 500 | 620 | 124% |\n| 硬體設備部 | 800 | 750 | 93.7% |\n| 雲端服務部 | 350 | 480 | 137.1% |\n| 人力資源部 | 100 | 95 | 95.0% |"
                     }
                 ],
                 chunksCount: 1,
@@ -294,13 +272,13 @@
             },
             {
                 id: 'doc-1',
-                title: '工業設備操作維修影片.mp4',
+                title: '工業設備操作維修影片.mp4 (範例)',
                 type: 'video',
                 url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
                 pages: [
                     { page: 1, text: "設備運作維修重點展示與安全說明", sec: 10 }
                 ],
-                chunksCount: 18,
+                chunksCount: 1,
                 createdAt: '2026-10-10'
             }
         ];
@@ -309,108 +287,58 @@
         let dbDocs = loadDocsFromStorage();
         let selectedDocId = 'all';
 
-        /**
-         * Convert HTML <table> elements inside a DOM document into structured Markdown tables
-         * so table columns and row relationships are perfectly preserved.
-         */
-        function convertTablesToMarkdown(doc) {
-            const tables = doc.querySelectorAll('table');
-            tables.forEach(table => {
-                let mdLines = [];
-                const rows = table.querySelectorAll('tr');
-
-                rows.forEach((row, rowIndex) => {
-                    const cells = row.querySelectorAll('th, td');
-                    if (cells.length === 0) return;
-
-                    const cellTexts = Array.from(cells).map(cell => {
-                        return cell.innerText.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim() || '-';
-                    });
-                    
-                    mdLines.push('| ' + cellTexts.join(' | ') + ' |');
-
-                    // If it's the first row, insert Markdown separator bar
-                    if (rowIndex === 0) {
-                        const separators = cellTexts.map(() => '---');
-                        mdLines.push('| ' + separators.join(' | ') + ' |');
-                    }
-                });
-
-                if (mdLines.length > 0) {
-                    const markdownTableString = '\n\n' + mdLines.join('\n') + '\n\n';
-                    const replacementNode = doc.createElement('div');
-                    replacementNode.innerText = markdownTableString;
-                    if (table.parentNode) {
-                        table.parentNode.replaceChild(replacementNode, table);
-                    }
-                }
+        // ===================== IndexedDB：保存上傳的檔案本體 =====================
+        function idbOpen() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('kb_files', 1);
+                req.onupgradeneeded = () => req.result.createObjectStore('files');
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
             });
         }
-
-        /**
-         * Extract structured plain text from DOM while keeping paragraphs and table lines intact
-         */
-        function extractStructuredTextFromDom(doc) {
-            // 1. Convert tables to Markdown
-            convertTablesToMarkdown(doc);
-
-            // 2. Remove scripts, styles, metadata and non-content tags
-            doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript, svg, style').forEach(el => el.remove());
-
-            // 3. Add line breaks to block-level elements
-            doc.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, tr, br, section, article').forEach(el => {
-                el.after(doc.createTextNode('\n'));
+        async function idbPut(id, blob) {
+            const db = await idbOpen();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('files', 'readwrite');
+                tx.objectStore('files').put(blob, id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
             });
-
-            // 4. Extract text line by line to preserve row structures
-            const rawText = doc.body?.innerText || doc.textContent || '';
-            const cleanLines = rawText
-                .split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
-
-            return cleanLines.join('\n');
         }
-
-        function initSupabase() {
-            const url = localStorage.getItem('kb_supabase_url');
-            const key = localStorage.getItem('kb_supabase_key');
-            
-            if (url && key && window.supabase) {
+        async function idbGet(id) {
+            const db = await idbOpen();
+            return new Promise((resolve, reject) => {
+                const req = db.transaction('files').objectStore('files').get(id);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+        async function idbDelete(id) {
+            try {
+                const db = await idbOpen();
+                db.transaction('files', 'readwrite').objectStore('files').delete(id);
+            } catch (e) { /* ignore */ }
+        }
+        // 重新整理後，blob: 網址會失效，這裡從 IndexedDB 重建
+        async function restoreLocalFiles() {
+            for (const doc of dbDocs) {
+                if (!doc.localFile) continue;
                 try {
-                    supabaseClient = window.supabase.createClient(url, key);
-                    const statusElem = document.getElementById('dbConnectionStatus');
-                    if (statusElem) {
-                        statusElem.className = "text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1";
-                        statusElem.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span> Supabase 資料庫已實體連線`;
-                    }
-                    document.getElementById('supabaseUrl').value = url;
-                    document.getElementById('supabaseKey').value = key;
-                    fetchDocumentsFromSupabase();
-                } catch (err) {
-                    console.error("Supabase client init error:", err);
-                }
+                    const blob = await idbGet(doc.id);
+                    if (blob) doc.url = URL.createObjectURL(blob);
+                    else doc.url = '';
+                } catch (e) { doc.url = ''; }
             }
         }
 
-        async function fetchDocumentsFromSupabase() {
-            if (!supabaseClient) return;
+        function persistDocs() {
             try {
-                const { data, error } = await supabaseClient.from('documents').select('*');
-                if (!error && data && data.length > 0) {
-                    dbDocs = data.map(d => ({
-                        id: d.id,
-                        title: d.title,
-                        type: d.file_type || 'pdf',
-                        url: d.file_url,
-                        pages: d.metadata?.pages || [],
-                        chunksCount: d.metadata?.chunks_count || 10,
-                        createdAt: d.created_at ? d.created_at.split('T')[0] : ''
-                    }));
-                    renderFileList();
-                }
-            } catch (err) {
-                console.warn("Unable to fetch documents from Supabase:", err);
+                // 不把 blob 網址寫進 localStorage (重新整理後必定失效)
+                const toSave = dbDocs.map(d => d.localFile ? { ...d, url: '' } : d);
+                localStorage.setItem('kb_persisted_docs', JSON.stringify(toSave));
+            } catch (e) {
+                console.warn('localStorage 寫入失敗:', e);
+                showToast('本機儲存空間已滿，部分資料可能無法保存');
             }
         }
 
@@ -418,12 +346,236 @@
             const stored = localStorage.getItem('kb_persisted_docs');
             if (!stored) {
                 localStorage.setItem('kb_persisted_docs', JSON.stringify(DEFAULT_PERSISTED_DOCS));
-                return DEFAULT_PERSISTED_DOCS;
+                return JSON.parse(JSON.stringify(DEFAULT_PERSISTED_DOCS));
             }
-            try { return JSON.parse(stored); } 
-            catch (e) { return DEFAULT_PERSISTED_DOCS; }
+            try { return JSON.parse(stored); }
+            catch (e) { return JSON.parse(JSON.stringify(DEFAULT_PERSISTED_DOCS)); }
         }
 
+        // ===================== 文字處理：表格轉 Markdown / 切塊 / 關鍵字 =====================
+        function convertTablesToMarkdown(doc) {
+            doc.querySelectorAll('table').forEach(table => {
+                const mdLines = [];
+                let headerDone = false;
+                table.querySelectorAll('tr').forEach(row => {
+                    const cells = row.querySelectorAll('th, td');
+                    if (cells.length === 0) return;
+                    const cellTexts = Array.from(cells).map(cell =>
+                        (cell.textContent || '').replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').replace(/\|/g, '/').trim() || '-'
+                    );
+                    mdLines.push('| ' + cellTexts.join(' | ') + ' |');
+                    if (!headerDone) {
+                        mdLines.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |');
+                        headerDone = true;
+                    }
+                });
+                if (mdLines.length > 0 && table.parentNode) {
+                    const node = doc.createElement('div');
+                    node.textContent = '\n' + mdLines.join('\n') + '\n';
+                    table.parentNode.replaceChild(node, table);
+                }
+            });
+        }
+
+        function extractStructuredTextFromDom(doc) {
+            doc.querySelectorAll('script, style, nav, footer, header, iframe, noscript, svg').forEach(el => el.remove());
+            convertTablesToMarkdown(doc);
+            doc.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, section, article').forEach(el => {
+                el.after(doc.createTextNode('\n'));
+            });
+            doc.querySelectorAll('br').forEach(el => el.replaceWith(doc.createTextNode('\n')));
+            const rawText = doc.body?.textContent || doc.textContent || '';
+            return rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+        }
+
+        /**
+         * 依「行」切塊，避免把表格攔腰切斷；表格跨塊時會自動重複表頭。
+         */
+        function chunkText(content, maxLen = 600) {
+            const lines = content.split('\n');
+            const pages = [];
+            let buf = '';
+            let tableHeader = '';
+
+            const flush = () => {
+                if (buf.trim()) pages.push({ page: pages.length + 1, text: buf.trim() });
+                buf = '';
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const isRow = line.trim().startsWith('|');
+
+                if (isRow && !tableHeader && /^\|[\s:\-|]+\|$/.test((lines[i + 1] || '').trim())) {
+                    tableHeader = line + '\n' + lines[i + 1];
+                }
+                if (!isRow) tableHeader = '';
+
+                if (buf && (buf.length + line.length + 1) > maxLen) {
+                    flush();
+                    if (isRow && tableHeader && !tableHeader.startsWith(line)) {
+                        buf = tableHeader + '\n';
+                    }
+                }
+                buf += line + '\n';
+            }
+            flush();
+            return pages;
+        }
+
+        /**
+         * 解析逐字稿：若每行以 mm:ss 或 hh:mm:ss 開頭，就使用真實時間；否則用估算值。
+         */
+        function chunkTranscript(transcript, maxLen = 400) {
+            const lines = transcript.split('\n').map(l => l.trim()).filter(Boolean);
+            const tsRe = /^\[?(\d{1,2}):(\d{2})(?::(\d{2}))?\]?\s*[-–:]?\s*(.*)$/;
+            const parsed = lines.map(l => {
+                const m = l.match(tsRe);
+                if (!m) return { sec: null, text: l };
+                const sec = m[3] !== undefined
+                    ? (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3])
+                    : (+m[1]) * 60 + (+m[2]);
+                return { sec, text: m[4] };
+            });
+            const hasTimes = parsed.filter(p => p.sec !== null).length >= 2;
+
+            const pages = [];
+            if (hasTimes) {
+                let curSec = 0, buf = '', bufSec = null;
+                parsed.forEach(p => {
+                    if (p.sec !== null) curSec = p.sec;
+                    if (buf && (buf.length + p.text.length) > maxLen) {
+                        pages.push({ page: pages.length + 1, text: buf.trim(), sec: bufSec ?? 0 });
+                        buf = ''; bufSec = null;
+                    }
+                    if (bufSec === null) bufSec = curSec;
+                    buf += p.text + ' ';
+                });
+                if (buf.trim()) pages.push({ page: pages.length + 1, text: buf.trim(), sec: bufSec ?? 0 });
+            } else {
+                const all = lines.join('\n');
+                let sec = 10;
+                for (let i = 0; i < all.length; i += maxLen) {
+                    pages.push({ page: pages.length + 1, text: all.substring(i, i + maxLen), sec });
+                    sec += 60;
+                }
+            }
+            return { pages, hasTimes };
+        }
+
+        const STOP_WORDS = ['請問', '有沒有', '是不是', '可不可以', '能不能', '什麼', '哪些', '哪個', '多少', '怎麼', '如何',
+            '為什麼', '這個', '那個', '是否', '一下', '告訴我', '幫我', '我想', '知道', '的', '了', '嗎', '呢', '吧', '是', '有', '在', '和', '與', '及', '請']
+            .sort((a, b) => b.length - a.length);
+
+        function extractKeywords(query) {
+            let s = query.toLowerCase().replace(/[，。,.?？!！"'「」()（）\-_/、：:；;]+/g, ' ');
+            STOP_WORDS.forEach(w => { s = s.split(w).join(' '); });
+            const set = new Set();
+            s.split(/\s+/).filter(Boolean).forEach(tok => {
+                if (tok.length >= 2) set.add(tok);
+                if (/[\u4e00-\u9fff]/.test(tok) && tok.length >= 3) {
+                    for (let n = 2; n <= 3; n++) {
+                        for (let i = 0; i + n <= tok.length; i++) set.add(tok.substr(i, n));
+                    }
+                }
+            });
+            return Array.from(set);
+        }
+
+        function scoreChunk(text, keywords) {
+            const lower = text.toLowerCase();
+            let score = 0;
+            const matched = [];
+            keywords.forEach(kw => {
+                if (lower.includes(kw)) {
+                    score += kw.length >= 4 ? 5 : (kw.length === 3 ? 3 : 1);
+                    matched.push(kw);
+                }
+            });
+            return { score, matched };
+        }
+
+        function highlightSnippet(text, matchedKeys) {
+            let safe = escapeHtml(text);
+            if (!matchedKeys.length) return safe;
+            const pattern = matchedKeys
+                .map(k => escapeHtml(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+                .sort((a, b) => b.length - a.length)
+                .join('|');
+            return safe.replace(new RegExp(pattern, 'gi'),
+                m => `<mark class="bg-amber-500/30 text-amber-200 px-0.5 rounded">${m}</mark>`);
+        }
+
+        // ===================== Supabase =====================
+        function initSupabase() {
+            const url = localStorage.getItem('kb_supabase_url');
+            const key = localStorage.getItem('kb_supabase_key');
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
+            document.getElementById('geminiModel').value = localStorage.getItem('kb_gemini_model') || '';
+            document.getElementById('geminiKey').value = localStorage.getItem('kb_gemini_key') || '';
+
+            if (url && key && window.supabase) {
+                try {
+                    supabaseClient = window.supabase.createClient(url, key);
+                    const statusElem = document.getElementById('dbConnectionStatus');
+                    statusElem.className = "text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center gap-1";
+                    statusElem.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span> Supabase 資料庫已連線`;
+                    fetchDocumentsFromSupabase();
+                } catch (err) {
+                    console.error("Supabase client init error:", err);
+                }
+            }
+        }
+
+        // 合併而非覆蓋：本機資料保留，遠端有而本機沒有的才加入
+        async function fetchDocumentsFromSupabase() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.from('documents').select('*');
+                if (error) { showToast('讀取 Supabase 失敗：' + error.message); return; }
+                if (data && data.length > 0) {
+                    const localIds = new Set(dbDocs.map(d => d.id));
+                    data.forEach(d => {
+                        if (localIds.has(d.id)) return;
+                        const meta = d.metadata || {};
+                        dbDocs.push({
+                            id: d.id,
+                            title: d.title,
+                            type: meta.type || d.file_type || 'pdf',
+                            url: d.file_url || '',
+                            ytId: meta.yt_id,
+                            pages: meta.pages || [],
+                            chunksCount: meta.chunks_count || (meta.pages || []).length,
+                            createdAt: d.created_at ? d.created_at.split('T')[0] : '',
+                            remoteOnly: true
+                        });
+                    });
+                    persistDocs();
+                    renderFileList();
+                }
+            } catch (err) {
+                console.warn("Unable to fetch documents from Supabase:", err);
+            }
+        }
+
+        async function insertRemote(doc) {
+            if (!supabaseClient) return;
+            try {
+                const { error } = await supabaseClient.from('documents').insert([{
+                    id: doc.id,
+                    title: doc.title,
+                    file_type: doc.type === 'youtube' ? 'video' : doc.type,   // 相容既有資料表欄位限制
+                    file_url: doc.localFile ? null : doc.url,                // blob: 網址無法跨工作階段使用
+                    metadata: { pages: doc.pages, chunks_count: doc.pages.length, type: doc.type, yt_id: doc.ytId || null }
+                }]);
+                if (error) showToast('寫入 Supabase 失敗：' + error.message);
+            } catch (dbErr) {
+                console.warn("Supabase insert error:", dbErr);
+            }
+        }
+
+        // ===================== 檔案清單 =====================
         function renderFileList() {
             const container = document.getElementById('fileList');
             if (!container) return;
@@ -431,10 +583,9 @@
 
             const allPill = document.createElement('button');
             allPill.className = `px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 border transition ${
-                selectedDocId === 'all' 
-                ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50' 
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
-            }`;
+                selectedDocId === 'all'
+                ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'}`;
             allPill.onclick = () => selectFilter('all');
             allPill.innerHTML = `<i data-lucide="layers" class="w-3.5 h-3.5"></i> 搜尋全部庫 (All)`;
             container.appendChild(allPill);
@@ -443,17 +594,15 @@
                 const isSelected = selectedDocId === doc.id;
                 const pill = document.createElement('div');
                 pill.className = `flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs border transition ${
-                    isSelected 
-                    ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50' 
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
-                }`;
+                    isSelected
+                    ? 'bg-indigo-600/30 text-indigo-300 border-indigo-500/50'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'}`;
 
-                let iconName = 'file-text';
-                let iconColor = 'text-rose-400';
+                let iconName = 'file-text', iconColor = 'text-rose-400';
                 if (doc.type === 'video') { iconName = 'video'; iconColor = 'text-amber-400'; }
                 else if (doc.type === 'youtube') { iconName = 'youtube'; iconColor = 'text-red-500'; }
                 else if (doc.type === 'webpage') { iconName = 'globe'; iconColor = 'text-emerald-400'; }
-                
+
                 pill.innerHTML = `
                     <button class="flex items-center gap-1.5 text-left" onclick="selectFilter('${doc.id}')">
                         <i data-lucide="${iconName}" class="w-3.5 h-3.5 ${iconColor}"></i>
@@ -461,23 +610,28 @@
                     </button>
                     <button onclick="deleteDoc(event, '${doc.id}')" class="text-slate-500 hover:text-rose-400 ml-1 p-0.5 rounded">
                         <i data-lucide="x" class="w-3 h-3"></i>
-                    </button>
-                `;
+                    </button>`;
                 container.appendChild(pill);
             });
             lucide.createIcons();
         }
 
         function selectFilter(id) {
-            selectedDocId = id;
+            // 再次點擊已鎖定的檔案 → 回到全庫搜尋
+            selectedDocId = (id !== 'all' && selectedDocId === id) ? 'all' : id;
             renderFileList();
-            showToast(id === 'all' ? "已切換至：搜尋全庫" : "已鎖定特定檔案搜尋");
+            showToast(selectedDocId === 'all' ? "已切換至：搜尋全庫" : "已鎖定特定檔案搜尋 (再點一次可取消)");
         }
 
-        function deleteDoc(event, id) {
+        async function deleteDoc(event, id) {
             event.stopPropagation();
+            const doc = dbDocs.find(d => d.id === id);
             dbDocs = dbDocs.filter(d => d.id !== id);
-            localStorage.setItem('kb_persisted_docs', JSON.stringify(dbDocs));
+            persistDocs();
+            if (doc && doc.localFile) idbDelete(id);
+            if (supabaseClient) {
+                try { await supabaseClient.from('documents').delete().eq('id', id); } catch (e) { console.warn(e); }
+            }
             if (selectedDocId === id) selectedDocId = 'all';
             renderFileList();
             showToast("已從知識庫移除該項目");
@@ -490,6 +644,7 @@
         function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
         function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
 
+        // ===================== 抓取網頁 =====================
         async function fetchWebpageContent() {
             const urlInput = document.getElementById('webpageUrl');
             const titleInput = document.getElementById('webpageTitle');
@@ -507,51 +662,39 @@
             showToast("正在啟動智慧多通道解析網頁與表格...");
             contentInput.value = "▶ 正在發起多通道網頁與 HTML 表格抓取，請稍候...\n";
 
-            // Channel 1: Jina AI Reader Engine
+            // 通道 1: Jina Reader
             try {
-                contentInput.value += "> 嘗試通道 1: Jina AI Reader Engine (自動將 HTML 轉 Markdown 表格)...\n";
-                const jinaUrl = `https://r.jina.ai/${url}`;
-                const res1 = await fetch(jinaUrl, { headers: { 'Accept': 'text/plain' } });
+                contentInput.value += "> 嘗試通道 1: Jina AI Reader (HTML 轉 Markdown 表格)...\n";
+                const res1 = await fetch(`https://r.jina.ai/${url}`, { headers: { 'Accept': 'text/plain' } });
                 if (res1.ok) {
                     const text = await res1.text();
                     if (text && text.trim().length > 80) {
                         const titleMatch = text.match(/^Title:\s*(.+)$/m);
-                        if (titleMatch && titleMatch[1] && !titleInput.value) {
-                            titleInput.value = titleMatch[1].trim();
-                        }
-
-                        let cleanText = text
+                        if (titleMatch && titleMatch[1] && !titleInput.value) titleInput.value = titleMatch[1].trim();
+                        const cleanText = text
                             .replace(/^Title:.*$/m, '')
                             .replace(/^URL Source:.*$/m, '')
                             .replace(/^Markdown Content:.*$/m, '')
                             .trim();
-
                         if (cleanText.length > 50) {
                             contentInput.value = cleanText;
-                            showToast("網頁與表格 (通道 1: Jina Engine) 抓取成功！");
+                            showToast("網頁與表格 (通道 1: Jina) 抓取成功！");
                             resetFetchButton();
                             return;
                         }
                     }
                 }
-            } catch (err1) {
-                console.warn("Channel 1 (Jina) failed:", err1);
-            }
+            } catch (err1) { console.warn("Channel 1 failed:", err1); }
 
-            // Channel 2: AllOrigins CORS Proxy + DOM Table Parser
+            // 通道 2: AllOrigins
             try {
-                contentInput.value += "> 通道 1 受到保護，嘗試通道 2: AllOrigins + 表格轉譯器...\n";
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                const res2 = await fetch(proxyUrl);
+                contentInput.value += "> 通道 1 失敗，嘗試通道 2: AllOrigins + 表格轉譯器...\n";
+                const res2 = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
                 const data2 = await res2.json();
-                
                 if (data2 && data2.contents) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data2.contents, 'text/html');
-                    
-                    const title = doc.querySelector('title')?.innerText || '';
+                    const doc = new DOMParser().parseFromString(data2.contents, 'text/html');
+                    const title = doc.querySelector('title')?.textContent || '';
                     if (title && !titleInput.value) titleInput.value = title.trim();
-
                     const structuredText = extractStructuredTextFromDom(doc);
                     if (structuredText && structuredText.length > 50) {
                         contentInput.value = structuredText;
@@ -560,23 +703,16 @@
                         return;
                     }
                 }
-            } catch (err2) {
-                console.warn("Channel 2 (AllOrigins) failed:", err2);
-            }
+            } catch (err2) { console.warn("Channel 2 failed:", err2); }
 
-            // Channel 3: CorsProxy Engine + DOM Table Parser
+            // 通道 3: corsproxy
             try {
-                contentInput.value += "> 嘗試通道 3: CorsProxy Engine + 表格轉譯器...\n";
-                const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
-                const res3 = await fetch(corsProxyUrl);
+                contentInput.value += "> 嘗試通道 3: CorsProxy + 表格轉譯器...\n";
+                const res3 = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
                 if (res3.ok) {
-                    const htmlText = await res3.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlText, 'text/html');
-                    
-                    const title = doc.querySelector('title')?.innerText || '';
+                    const doc = new DOMParser().parseFromString(await res3.text(), 'text/html');
+                    const title = doc.querySelector('title')?.textContent || '';
                     if (title && !titleInput.value) titleInput.value = title.trim();
-
                     const structuredText = extractStructuredTextFromDom(doc);
                     if (structuredText && structuredText.length > 50) {
                         contentInput.value = structuredText;
@@ -585,9 +721,7 @@
                         return;
                     }
                 }
-            } catch (err3) {
-                console.warn("Channel 3 (CorsProxy) failed:", err3);
-            }
+            } catch (err3) { console.warn("Channel 3 failed:", err3); }
 
             contentInput.value = `[網頁自動抓取說明]\n` +
                 `目標網頁設有 Cloudflare 人機驗證、帳號登入限制或動態阻擋。\n\n` +
@@ -595,17 +729,13 @@
                 `1. 請直接開啟目標網址：${url}\n` +
                 `2. 複製網頁上的文章或直接全選表格。\n` +
                 `3. 清除本文字方塊，直接「貼上表格文字」後點擊右下角【存入持久化知識庫】！`;
-
             showToast("自動抓取受阻，請直接複製貼上網頁文章或表格。");
             resetFetchButton();
         }
 
         function resetFetchButton() {
             const btn = document.getElementById('btnFetchUrl');
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50');
-            }
+            if (btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
         }
 
         async function saveWebpageDoc() {
@@ -613,189 +743,114 @@
             const title = document.getElementById('webpageTitle').value.trim() || '網頁表格文章 (' + new Date().toLocaleDateString() + ')';
             const content = document.getElementById('webpageContent').value.trim();
 
-            if (!content || content.startsWith('[網頁自動抓取說明]')) {
+            if (!content || content.startsWith('[網頁自動抓取說明]') || content.startsWith('▶ 正在發起')) {
                 showToast("請先輸入或貼上有效的網頁文章或表格內容");
                 return;
             }
 
-            const chunkSize = 500;
-            let pages = [];
-            for (let i = 0; i < content.length; i += chunkSize) {
-                pages.push({
-                    page: Math.floor(i / chunkSize) + 1,
-                    text: content.substring(i, i + chunkSize)
-                });
-            }
-
-            const newDocId = 'doc-web-' + Date.now();
+            const pages = chunkText(content, 600);
             const newDoc = {
-                id: newDocId,
-                title: title,
-                type: 'webpage',
-                url: url,
-                pages: pages,
+                id: 'doc-web-' + Date.now(),
+                title, type: 'webpage', url, pages,
                 chunksCount: pages.length,
                 createdAt: new Date().toISOString().split('T')[0]
             };
 
-            if (supabaseClient) {
-                try {
-                    await supabaseClient.from('documents').insert([{
-                        id: newDocId,
-                        title: title,
-                        file_type: 'webpage',
-                        file_url: url,
-                        metadata: { pages: pages, chunks_count: pages.length }
-                    }]);
-                } catch (dbErr) {
-                    console.warn("Supabase insert error:", dbErr);
-                }
-            }
-
+            await insertRemote(newDoc);
             dbDocs.unshift(newDoc);
-            localStorage.setItem('kb_persisted_docs', JSON.stringify(dbDocs));
-            selectedDocId = newDocId;
+            persistDocs();
+            // 保持「搜尋全庫」，避免新增檔案後搜尋範圍被鎖在單一檔案
             renderFileList();
             closeUrlModal();
 
             document.getElementById('webpageTitle').value = '';
             document.getElementById('webpageUrl').value = '';
             document.getElementById('webpageContent').value = '';
-
-            showToast(`網頁表格《${title}》已成功存入知識庫！`);
+            showToast(`網頁《${title}》已存入知識庫 (共 ${pages.length} 個區塊)`);
         }
 
+        // ===================== YouTube =====================
         function extractYouTubeId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
+            const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/);
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
         async function saveYtDoc() {
             const url = document.getElementById('ytUrl').value.trim();
             const ytId = extractYouTubeId(url);
-
-            if (!url || !ytId) {
-                showToast("請輸入有效的 YouTube 影片網址");
-                return;
-            }
+            if (!url || !ytId) { showToast("請輸入有效的 YouTube 影片網址"); return; }
 
             const title = document.getElementById('ytTitle').value.trim() || `YouTube 影片 (${ytId})`;
-            const transcript = document.getElementById('ytTranscript').value.trim() || `YouTube 影片 ${title} 字幕記錄。`;
+            const transcript = document.getElementById('ytTranscript').value.trim();
+            if (!transcript) { showToast("請貼上逐字稿，否則系統沒有內容可以搜尋"); return; }
 
-            const chunkSize = 400;
-            let pages = [];
-            let secCounter = 10;
-            for (let i = 0; i < transcript.length; i += chunkSize) {
-                pages.push({
-                    page: Math.floor(i / chunkSize) + 1,
-                    text: transcript.substring(i, i + chunkSize),
-                    sec: secCounter
-                });
-                secCounter += 60;
-            }
-
-            const newDocId = 'doc-yt-' + Date.now();
+            const { pages, hasTimes } = chunkTranscript(transcript, 400);
             const newDoc = {
-                id: newDocId,
-                title: title,
-                type: 'youtube',
-                ytId: ytId,
-                url: url,
-                pages: pages,
+                id: 'doc-yt-' + Date.now(),
+                title, type: 'youtube', ytId, url, pages,
                 chunksCount: pages.length,
                 createdAt: new Date().toISOString().split('T')[0]
             };
 
-            if (supabaseClient) {
-                try {
-                    await supabaseClient.from('documents').insert([{
-                        id: newDocId,
-                        title: title,
-                        file_type: 'video',
-                        file_url: url,
-                        metadata: { pages: pages, chunks_count: pages.length, yt_id: ytId }
-                    }]);
-                } catch (dbErr) {
-                    console.warn("Supabase insert error:", dbErr);
-                }
-            }
-
+            await insertRemote(newDoc);
             dbDocs.unshift(newDoc);
-            localStorage.setItem('kb_persisted_docs', JSON.stringify(dbDocs));
-            selectedDocId = newDocId;
+            persistDocs();
             renderFileList();
             closeYtModal();
 
             document.getElementById('ytTitle').value = '';
             document.getElementById('ytUrl').value = '';
             document.getElementById('ytTranscript').value = '';
-
-            showToast(`YouTube 影片《${title}》已存入知識庫！`);
+            showToast(hasTimes ? `YouTube《${title}》已存入 (使用逐字稿內的時間標記)` : `YouTube《${title}》已存入 (逐字稿無時間標記，時間點為估算值)`);
         }
 
+        // ===================== 檔案上傳 =====================
         async function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             showToast(`正在解析檔案：《${file.name}》...`);
             const isPdf = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
-            const isVideo = file.type.startsWith('video/') || file.type.startsWith('audio/');
+            const isMedia = file.type.startsWith('video/') || file.type.startsWith('audio/');
 
             try {
                 let pages = [];
-                let fileType = isPdf ? 'pdf' : 'video';
-                let objectUrl = URL.createObjectURL(file);
+                const fileType = isPdf ? 'pdf' : 'video';
+                const objectUrl = URL.createObjectURL(file);
 
                 if (isPdf) {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const textContent = await page.getTextContent();
-                        const text = textContent.items.map(item => item.str).join(' ');
-                        pages.push({
-                            page: i,
-                            text: text.trim() || `[第 ${i} 頁無可辨識文字]`
-                        });
+                        const text = textContent.items.map(item => item.str).join(' ').trim();
+                        pages.push({ page: i, text: text || `[第 ${i} 頁無可辨識文字 (可能是掃描圖片)]` });
                     }
-                } else if (isVideo) {
+                } else if (isMedia) {
+                    // 瀏覽器端無法做語音轉文字，這裡僅放標記；要能搜尋影片內容需另外提供逐字稿
                     pages = [
-                        { page: 1, text: `【影片內容標記】${file.name} - 00:00 設備運作與簡介`, sec: 0 },
-                        { page: 2, text: `【影片內容標記】${file.name} - 01:15 步驟示範與說明`, sec: 75 }
+                        { page: 1, text: `【影片標記】${file.name} 開頭`, sec: 0 }
                     ];
+                } else {
+                    showToast("不支援的檔案格式");
+                    return;
                 }
 
-                const newDocId = 'doc-' + Date.now();
                 const newDoc = {
-                    id: newDocId,
-                    title: file.name,
-                    type: fileType,
-                    url: objectUrl,
-                    pages: pages,
-                    chunksCount: pages.length,
+                    id: 'doc-' + Date.now(),
+                    title: file.name, type: fileType, url: objectUrl, localFile: true,
+                    pages, chunksCount: pages.length,
                     createdAt: new Date().toISOString().split('T')[0]
                 };
 
-                if (supabaseClient) {
-                    try {
-                        await supabaseClient.from('documents').insert([{
-                            id: newDocId,
-                            title: file.name,
-                            file_type: fileType,
-                            file_url: objectUrl,
-                            metadata: { pages: pages, chunks_count: pages.length }
-                        }]);
-                    } catch (dbErr) {
-                        console.warn("Supabase insert warning:", dbErr);
-                    }
-                }
-
+                try { await idbPut(newDoc.id, file); } catch (idbErr) { console.warn('IndexedDB 儲存失敗:', idbErr); }
+                await insertRemote(newDoc);
                 dbDocs.unshift(newDoc);
-                localStorage.setItem('kb_persisted_docs', JSON.stringify(dbDocs));
-                selectedDocId = newDocId;
+                persistDocs();
                 renderFileList();
-                showToast(`檔案《${file.name}》解析完成並存入知識庫！`);
+                showToast(isMedia
+                    ? `《${file.name}》已存入。注意：影片本身沒有文字內容可搜尋`
+                    : `檔案《${file.name}》解析完成 (共 ${pages.length} 頁)`);
             } catch (err) {
                 console.error("File upload parse error:", err);
                 showToast("檔案解析失敗：" + err.message);
@@ -804,29 +859,169 @@
             }
         }
 
+        // ===================== 問答 =====================
+        function renderAnswer(raw) {
+            const safe = escapeHtml(raw);
+            const lines = safe.split('\n');
+            const out = [];
+            const inline = s => s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].trim().startsWith('|')) {
+                    const block = [];
+                    while (i < lines.length && lines[i].trim().startsWith('|')) { block.push(lines[i].trim()); i++; }
+                    i--;
+                    if (block.length >= 2 && /^\|[\s:\-|]+\|$/.test(block[1])) {
+                        const cells = r => r.replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+                        let html = '<div class="overflow-x-auto"><table class="md-table"><thead><tr>' +
+                            cells(block[0]).map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+                        block.slice(2).forEach(r => { html += '<tr>' + cells(r).map(c => `<td>${c}</td>`).join('') + '</tr>'; });
+                        out.push(html + '</tbody></table></div>');
+                    } else {
+                        block.forEach(b => out.push(inline(b) + '<br>'));
+                    }
+                } else {
+                    out.push(inline(lines[i]) + '<br>');
+                }
+            }
+
+            return out.join('')
+                .replace(/\[\[PAGE:([^:\]]+):(\d+)\]\]/g, (m, docId, pageNum) =>
+                    `<button onclick="seekToDoc('${docId}', ${pageNum})" class="inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono hover:bg-emerald-500/30 transition my-0.5">
+                        <i data-lucide="file-text" class="w-3 h-3"></i> 出處 (${pageNum})</button>`)
+                .replace(/\[\[SEEK:([^:\]]+):(\d+)\]\]/g, (m, docId, sec) =>
+                    `<button onclick="seekToVideo('${docId}', ${sec})" class="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono hover:bg-amber-500/30 transition my-0.5">
+                        <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 ${formatTime(+sec)}</button>`)
+                .replace(/\[\[YT:([^:\]]+):(\d+)\]\]/g, (m, docId, sec) =>
+                    `<button onclick="seekToYouTube('${docId}', ${sec})" class="inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-mono hover:bg-red-500/30 transition my-0.5">
+                        <i data-lucide="youtube" class="w-3 h-3"></i> YouTube ${formatTime(+sec)}</button>`);
+        }
+
+        function collectChunks(targetDocs, keywords) {
+            const chunks = [];
+            targetDocs.forEach(doc => {
+                (doc.pages || []).forEach(p => {
+                    const { score, matched } = scoreChunk(p.text, keywords);
+                    chunks.push({ doc, page: p.page, text: p.text, sec: p.sec || 0, score, matched });
+                });
+            });
+            return chunks;
+        }
+
+        async function askGemini(q, targetDocs, apiKey) {
+            const model = localStorage.getItem('kb_gemini_model') || DEFAULT_GEMINI_MODEL;
+            const keywords = extractKeywords(q);
+            const chunks = collectChunks(targetDocs, keywords);
+
+            // 依相關度挑選區塊，而不是從頭硬截斷
+            const anyMatch = chunks.some(c => c.score > 0);
+            const ordered = anyMatch ? [...chunks].sort((a, b) => b.score - a.score) : chunks;
+
+            let docContext = '', used = 0;
+            for (const c of ordered) {
+                const label = (c.doc.type === 'youtube' || c.doc.type === 'video')
+                    ? `[檔案: ${c.doc.title} | doc_id: ${c.doc.id} | 類型: ${c.doc.type} | 時間: ${c.sec} 秒]`
+                    : `[檔案: ${c.doc.title} | doc_id: ${c.doc.id} | 類型: ${c.doc.type} | 區塊/頁碼: ${c.page}]`;
+                const piece = `${label}\n${c.text}\n\n`;
+                if (used + piece.length > GEMINI_CONTEXT_LIMIT) continue;
+                docContext += piece;
+                used += piece.length;
+            }
+
+            const systemPrompt = `你是一個嚴謹的多模態與表格資料問答助理。請完全根據提供的資料（包含 Markdown 表格與網頁內文）回答，使用繁體中文。
+如果找不到答案，請回答：「根據目前的知識庫資料，找不到相關資訊。」
+回答時請在相關句子後附上出處標記，doc_id 與數字必須取自資料標籤：
+- PDF 或網頁區塊：[[PAGE:doc_id:區塊或頁碼]]
+- 影片(type 為 video)：[[SEEK:doc_id:秒數]]
+- YouTube(type 為 youtube)：[[YT:doc_id:秒數]]
+需要列出表格時請使用 Markdown 表格。`;
+
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: `【資料庫內文與表格數據】：\n${docContext}\n【使用者問題】：${q}` }]
+                    }]
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || data.error) {
+                throw new Error(data.error?.message || `HTTP ${res.status}`);
+            }
+            const text = data.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('');
+            if (!text) {
+                const reason = data.promptFeedback?.blockReason || data.candidates?.[0]?.finishReason || '未知原因';
+                throw new Error('Gemini 沒有回傳內容 (' + reason + ')');
+            }
+            return renderAnswer(text);
+        }
+
+        function localSearch(q, targetDocs) {
+            const keywords = extractKeywords(q);
+            const matches = collectChunks(targetDocs, keywords)
+                .filter(c => c.score > 0)
+                .sort((a, b) => b.score - a.score);
+
+            if (matches.length === 0) {
+                const scope = selectedDocId === 'all' ? '整個知識庫' : `《${escapeHtml(targetDocs[0]?.title || '檔案')}》`;
+                return `在${scope}中，找不到與「<strong>${escapeHtml(q)}</strong>」相符的關鍵字。<br><br>
+                    <div class="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs leading-relaxed">
+                    💡 <strong>搜尋排錯建議：</strong><br>
+                    1. 嘗試更短、更具體的關鍵字 (例如表格裡的實際欄位名稱)。<br>
+                    2. 目前沒有 Gemini Key 時只做「字面比對」，同義詞 (如「獲利」vs「營收」) 不會命中。<br>
+                    3. 點擊上方檔案確認抓取內容是否完整；動態網頁請改用複製貼上。<br>
+                    4. 影片 / 掃描版 PDF 沒有文字內容，無法被搜尋。</div>`;
+            }
+
+            let html = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的內容：<br><br>`;
+            matches.slice(0, 3).forEach(m => {
+                let snippet = highlightSnippet(m.text.length > 300 ? m.text.substring(0, 300) + '...' : m.text, m.matched);
+                let btn = '';
+                if (m.doc.type === 'youtube') {
+                    const s = m.sec || 10;
+                    btn = `<button onclick="seekToYouTube('${m.doc.id}', ${s})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded transition hover:bg-red-500/30"><i data-lucide="youtube" class="w-3 h-3"></i> YouTube ${formatTime(s)}</button>`;
+                } else if (m.doc.type === 'webpage') {
+                    btn = `<button onclick="seekToDoc('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded transition hover:bg-emerald-500/30"><i data-lucide="globe" class="w-3 h-3"></i> 網頁區塊 ${m.page}</button>`;
+                } else if (m.doc.type === 'video') {
+                    btn = `<button onclick="seekToVideo('${m.doc.id}', ${m.sec || 0})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded transition hover:bg-amber-500/30"><i data-lucide="play-circle" class="w-3 h-3"></i> 影片 ${formatTime(m.sec || 0)}</button>`;
+                } else {
+                    btn = `<button onclick="seekToDoc('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded transition hover:bg-rose-500/30"><i data-lucide="file-text" class="w-3 h-3"></i> 第 ${m.page} 頁</button>`;
+                }
+                html += `
+                    <div class="mb-3 p-3 rounded-lg bg-slate-900/80 border border-slate-700/50 text-xs leading-relaxed">
+                        <div class="font-medium text-slate-300 mb-1.5 flex items-center justify-between gap-2">
+                            <span class="truncate max-w-[200px]">${escapeHtml(m.doc.title)}</span>${btn}
+                        </div>
+                        <div class="text-slate-400 whitespace-pre-wrap font-mono bg-slate-950 p-2 rounded border border-slate-800">${snippet}</div>
+                    </div>`;
+            });
+            html += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：填入 Gemini API Key 可獲得語意整合的回答。</div>`;
+            return html;
+        }
+
         async function handleSendQuestion(e) {
             e.preventDefault();
             const input = document.getElementById('userInput');
             const q = input.value.trim();
             if (!q) return;
-
             input.value = '';
-            const chatMessages = document.getElementById('chatMessages');
 
-            chatMessages.innerHTML += `
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.insertAdjacentHTML('beforeend', `
                 <div class="flex gap-3 text-sm justify-end">
-                    <div class="bg-indigo-600 text-white rounded-xl p-3.5 max-w-[85%] leading-relaxed shadow-sm">
-                        ${escapeHtml(q)}
-                    </div>
+                    <div class="bg-indigo-600 text-white rounded-xl p-3.5 max-w-[85%] leading-relaxed shadow-sm">${escapeHtml(q)}</div>
                     <div class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shrink-0">
                         <i data-lucide="user" class="w-4 h-4"></i>
                     </div>
-                </div>
-            `;
+                </div>`);
 
-            const aiLoaderId = 'ai-loader-' + Date.now();
-            chatMessages.innerHTML += `
-                <div id="${aiLoaderId}" class="flex gap-3 text-sm">
+            const loaderId = 'ai-loader-' + Date.now();
+            chatMessages.insertAdjacentHTML('beforeend', `
+                <div id="${loaderId}" class="flex gap-3 text-sm">
                     <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 animate-pulse">
                         <i data-lucide="bot" class="w-4 h-4"></i>
                     </div>
@@ -834,321 +1029,173 @@
                         <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
                         <span>智慧檢索分析表格與文件內容中...</span>
                     </div>
-                </div>
-            `;
+                </div>`);
             chatMessages.scrollTop = chatMessages.scrollHeight;
             lucide.createIcons();
 
-            let targetDocs = dbDocs;
-            if (selectedDocId !== 'all') {
-                targetDocs = dbDocs.filter(d => d.id === selectedDocId);
-            }
-
+            const targetDocs = selectedDocId === 'all' ? dbDocs : dbDocs.filter(d => d.id === selectedDocId);
             let responseHTML = '';
-            const geminiApiKey = localStorage.getItem('kb_gemini_key');
 
             try {
-                if (geminiApiKey) {
-                    let docContext = "";
-                    targetDocs.forEach(doc => {
-                        docContext += `\n--- 檔案標題: ${doc.title} (ID: ${doc.id}, 類型: ${doc.type}) ---\n`;
-                        if (doc.pages) {
-                            doc.pages.forEach(p => {
-                                if (doc.type === 'youtube' || doc.type === 'video') {
-                                    docContext += `[時間: ${p.sec || 0} 秒] ${p.text}\n`;
-                                } else {
-                                    docContext += `[第 ${p.page} 頁/表格區塊] ${p.text}\n`;
-                                }
-                            });
-                        }
-                    });
-
-                    const systemPrompt = `你是一個嚴謹的多模態與表格資料問答助理。請完全根據提供資料（包含 Markdown 表格數據與網頁內文）回答。
-如果找不到答案，請回答：「根據目前的知識庫資料，找不到相關資訊。」
-請引述出處標記：
-- PDF或網頁表格段落標記：[[PAGE:doc_id:page_number]]
-- 影片時間軸標記：[[SEEK:doc_id:seconds]]
-- YouTube 時間軸標記：[[YT:doc_id:seconds]]`;
-
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: systemPrompt },
-                                    { text: `【資料庫內文與表格數據】：\n${docContext.substring(0, 30000)}` },
-                                    { text: `【使用者問題】：${q}` }
-                                ]
-                            }]
-                        })
-                    });
-
-                    const resultData = await res.json();
-                    let rawText = resultData.candidates?.[0]?.content?.parts?.[0]?.text || "無法從 Gemini API 取得回答，請確認 Key 是否正確。";
-
-                    responseHTML = rawText
-                        .replace(/\[\[PAGE:(.*?):(.*?)]\]/g, (match, docId, pageNum) => {
-                            return `<button onclick="seekToDoc('${docId}', ${pageNum})" class="inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono hover:bg-emerald-500/30 transition my-0.5">
-                                <i data-lucide="file-text" class="w-3 h-3"></i> 查看表格/出處段落 (${pageNum})
-                            </button>`;
-                        })
-                        .replace(/\[\[SEEK:(.*?):(.*?)]\]/g, (match, docId, sec) => {
-                            return `<button onclick="seekToVideo('${docId}', ${sec})" class="inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono hover:bg-amber-500/30 transition my-0.5">
-                                <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 ${formatTime(sec)}
-                            </button>`;
-                        })
-                        .replace(/\[\[YT:(.*?):(.*?)]\]/g, (match, docId, sec) => {
-                            return `<button onclick="seekToYouTube('${docId}', ${sec})" class="inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded font-mono hover:bg-red-500/30 transition my-0.5">
-                                <i data-lucide="youtube" class="w-3 h-3"></i> YouTube ${formatTime(sec)}
-                            </button>`;
-                        })
-                        .replace(/\n/g, '<br>');
-
+                if (targetDocs.length === 0) {
+                    responseHTML = '知識庫目前是空的，請先新增網頁、PDF 或 YouTube 內容。';
                 } else {
-                    // Smart Sub-keyword Extraction & Fuzzy Token Match
-                    function extractSubKeywords(queryStr) {
-                        let tokens = queryStr.split(/[\s,，?？!！"'「」\(\)（）\-\_\/]+/);
-                        let set = new Set();
-                        tokens.forEach(tok => {
-                            if (!tok) return;
-                            set.add(tok);
-                            if (tok.length >= 3) {
-                                // Extract 2-char and 3-char sub-keywords for fuzzy match
-                                for (let len = 2; len <= Math.min(3, tok.length - 1); len++) {
-                                    for (let i = 0; i <= tok.length - len; i++) {
-                                        let sub = tok.substring(i, i + len);
-                                        if (sub.length >= 2) set.add(sub);
-                                    }
-                                }
-                            }
-                        });
-                        return Array.from(set);
+                    const geminiApiKey = localStorage.getItem('kb_gemini_key');
+                    let geminiErr = '';
+                    if (geminiApiKey) {
+                        try { responseHTML = await askGemini(q, targetDocs, geminiApiKey); }
+                        catch (gErr) { geminiErr = gErr.message; console.error('Gemini error:', gErr); }
                     }
-
-                    const queryKeywords = extractSubKeywords(q);
-                    let matches = [];
-
-                    targetDocs.forEach(doc => {
-                        if (doc.pages) {
-                            doc.pages.forEach(p => {
-                                let score = 0;
-                                let matchedKeys = [];
-                                queryKeywords.forEach(kw => {
-                                    if (p.text.includes(kw)) {
-                                        let weight = (kw.length >= 4) ? 5 : (kw.length === 3 ? 3 : 1);
-                                        score += weight;
-                                        matchedKeys.push(kw);
-                                    }
-                                });
-                                if (score > 0) {
-                                    matches.push({ doc, page: p.page, text: p.text, sec: p.sec || 0, score, matchedKeys });
-                                }
-                            });
+                    if (!responseHTML) {
+                        if (geminiErr) {
+                            responseHTML = `<div class="p-2.5 mb-3 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs leading-relaxed">
+                                ⚠️ Gemini 呼叫失敗：${escapeHtml(geminiErr)}<br>請檢查 API Key 與模型名稱 (設定中可修改)。以下改用本機關鍵字搜尋結果：</div>`;
                         }
-                    });
-
-                    matches.sort((a, b) => b.score - a.score);
-
-                    if (matches.length > 0) {
-                        responseHTML = `在知識庫中找到與「<strong>${escapeHtml(q)}</strong>」相關的內容如下：<br><br>`;
-                        matches.slice(0, 3).forEach((m) => {
-                            let snippet = m.text;
-                            m.matchedKeys.forEach(kw => {
-                                snippet = snippet.replaceAll(kw, `<mark class="bg-amber-500/30 text-amber-200 px-0.5 rounded">${kw}</mark>`);
-                            });
-                            if (snippet.length > 300) snippet = snippet.substring(0, 300) + '...';
-
-                            let btnHTML = '';
-                            if (m.doc.type === 'youtube') {
-                                const targetSec = m.sec || 10;
-                                btnHTML = `<button onclick="seekToYouTube('${m.doc.id}', ${targetSec})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-300 border border-red-500/30 px-2 py-0.5 rounded transition hover:bg-red-500/30">
-                                    <i data-lucide="youtube" class="w-3 h-3"></i> YouTube ${formatTime(targetSec)}
-                                </button>`;
-                            } else if (m.doc.type === 'webpage') {
-                                btnHTML = `<button onclick="seekToDoc('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded transition hover:bg-emerald-500/30">
-                                    <i data-lucide="globe" class="w-3 h-3"></i> 網頁與表格段落
-                                </button>`;
-                            } else if (m.doc.type === 'video') {
-                                btnHTML = `<button onclick="seekToVideo('${m.doc.id}', ${m.sec || 0})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded transition hover:bg-amber-500/30">
-                                    <i data-lucide="play-circle" class="w-3 h-3"></i> 影片 ${formatTime(m.sec || 0)}
-                                </button>`;
-                            } else {
-                                btnHTML = `<button onclick="seekToDoc('${m.doc.id}', ${m.page})" class="shrink-0 inline-flex items-center gap-1 text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded transition hover:bg-rose-500/30">
-                                    <i data-lucide="file-text" class="w-3 h-3"></i> 第 ${m.page} 頁
-                                </button>`;
-                            }
-
-                            responseHTML += `
-                                <div class="mb-3 p-3 rounded-lg bg-slate-900/80 border border-slate-700/50 text-xs leading-relaxed">
-                                    <div class="font-medium text-slate-300 mb-1.5 flex items-center justify-between">
-                                        <span class="truncate max-w-[200px]">${escapeHtml(m.doc.title)}</span>
-                                        ${btnHTML}
-                                    </div>
-                                    <div class="text-slate-400 whitespace-pre-wrap font-mono bg-slate-950 p-2 rounded border border-slate-800">${snippet}</div>
-                                </div>
-                            `;
-                        });
-                        responseHTML += `<div class="text-[11px] text-slate-500 mt-1">💡 提示：若需更自然語義的整合回答，建議於設定中填入 Gemini API Key。</div>`;
-                    } else {
-                        responseHTML = `在目前的檔案庫（如《${targetDocs[0]?.title || '知識庫'}》）中，未能精確匹配到包含與「<strong>${escapeHtml(q)}</strong>」相關的關鍵字。<br><br>` +
-                            `<div class="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs leading-relaxed">` +
-                            `💡 <strong>搜尋排錯建議：</strong><br>` +
-                            `1. 請嘗試輸入更簡短的關鍵字（如「第一階段」或「公費」）。<br>` +
-                            `2. 點擊頂部《${targetDocs[0]?.title || '檔案'}》確認當初自動抓取的內容是否完整。若為動態網頁，可重新點擊【新增網頁 URL】將網頁上的對象表格直接複製貼上。<br>` +
-                            `3. 設定 Gemini API Key 後可啟動同義詞與長文自然語言推導搜尋。` +
-                            `</div>`;
+                        responseHTML += localSearch(q, targetDocs);
                     }
                 }
             } catch (err) {
                 console.error("Search error:", err);
                 responseHTML = `檢索過程中發生錯誤：${escapeHtml(err.message)}`;
             } finally {
-                const loaderElem = document.getElementById(aiLoaderId);
-                if (loaderElem) loaderElem.remove();
-
-                chatMessages.innerHTML += `
+                document.getElementById(loaderId)?.remove();
+                chatMessages.insertAdjacentHTML('beforeend', `
                     <div class="flex gap-3 text-sm">
                         <div class="w-8 h-8 rounded-full bg-indigo-600/30 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
                             <i data-lucide="bot" class="w-4 h-4"></i>
                         </div>
-                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-200 max-w-[85%] leading-relaxed">
-                            ${responseHTML}
-                        </div>
-                    </div>
-                `;
+                        <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3.5 text-slate-200 max-w-[85%] leading-relaxed">${responseHTML}</div>
+                    </div>`);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
                 lucide.createIcons();
             }
         }
 
+        // ===================== 預覽區 =====================
         function seekToDoc(docId, pageNum) {
             const doc = dbDocs.find(d => d.id === docId);
-            if (!doc) return;
+            if (!doc) { showToast('找不到該檔案 (可能已被刪除)'); return; }
 
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('videoViewer').classList.add('hidden');
             document.getElementById('youtubeViewer').classList.add('hidden');
 
             const docViewer = document.getElementById('documentViewer');
-            const docTitle = document.getElementById('docTitle');
             const docExternalLink = document.getElementById('docExternalLink');
             const docPageIndicator = document.getElementById('docPageIndicator');
             const docContentArea = document.getElementById('docContentArea');
 
             docViewer.classList.remove('hidden');
-            docTitle.innerText = doc.title;
+            document.getElementById('docTitle').innerText = doc.title;
 
             if (doc.type === 'webpage' && doc.url && doc.url !== '#') {
                 docExternalLink.href = doc.url;
                 docExternalLink.classList.remove('hidden');
                 docExternalLink.classList.add('inline-flex');
-                docPageIndicator.innerText = `網頁/表格區塊 ${pageNum}`;
+                docPageIndicator.innerText = `網頁區塊 ${pageNum}`;
             } else {
                 docExternalLink.classList.add('hidden');
                 docPageIndicator.innerText = `第 ${pageNum} 頁`;
             }
 
-            if (doc.pages) {
-                docContentArea.innerHTML = doc.pages.map(p => `
-                    <div class="p-4 rounded-lg border ${p.page === pageNum ? 'bg-emerald-950/40 border-emerald-500/50 ring-1 ring-emerald-500/30' : 'bg-slate-950 border-slate-800'} transition">
-                        <div class="text-xs font-mono text-slate-500 mb-2 flex justify-between">
-                            <span>${doc.type === 'webpage' ? 'SECTION ' + p.page : 'PAGE ' + p.page}</span>
-                            ${p.page === pageNum ? '<span class="text-emerald-400 font-bold">● 引述標的表格段落</span>' : ''}
-                        </div>
-                        <div class="text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">${escapeHtml(p.text)}</div>
+            docContentArea.innerHTML = (doc.pages || []).map(p => `
+                <div id="chunk-${p.page}" class="p-4 rounded-lg border ${p.page === pageNum ? 'bg-emerald-950/40 border-emerald-500/50 ring-1 ring-emerald-500/30' : 'bg-slate-950 border-slate-800'} transition">
+                    <div class="text-xs font-mono text-slate-500 mb-2 flex justify-between">
+                        <span>${doc.type === 'webpage' ? 'SECTION ' + p.page : 'PAGE ' + p.page}</span>
+                        ${p.page === pageNum ? '<span class="text-emerald-400 font-bold">● 引述標的段落</span>' : ''}
                     </div>
-                `).join('');
-            }
+                    <div class="text-slate-200 leading-relaxed font-mono whitespace-pre-wrap">${escapeHtml(p.text)}</div>
+                </div>`).join('');
 
-            document.getElementById('previewBadge').innerText = doc.type === 'webpage' ? `網頁表格: ${doc.title}` : `文件: ${doc.title}`;
+            document.getElementById('chunk-' + pageNum)?.scrollIntoView({ block: 'center' });
+            document.getElementById('previewBadge').innerText = doc.type === 'webpage' ? `網頁: ${doc.title}` : `文件: ${doc.title}`;
         }
 
         function seekToVideo(docId, seconds) {
             const doc = dbDocs.find(d => d.id === docId);
-            if (!doc) return;
+            if (!doc) { showToast('找不到該影片 (可能已被刪除)'); return; }
+            if (!doc.url) { showToast('此影片檔案已不在本機，請重新上傳'); return; }
 
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('documentViewer').classList.add('hidden');
             document.getElementById('youtubeViewer').classList.add('hidden');
-            
-            const videoViewer = document.getElementById('videoViewer');
-            const videoPlayer = document.getElementById('mainVideoPlayer');
-            const videoSource = document.getElementById('videoSource');
 
+            const videoViewer = document.getElementById('videoViewer');
+            const player = document.getElementById('mainVideoPlayer');
             videoViewer.classList.remove('hidden');
             videoViewer.classList.add('flex');
 
-            if (videoSource.src !== doc.url) {
-                videoSource.src = doc.url;
-                videoPlayer.load();
+            const go = () => { player.currentTime = seconds; player.play().catch(() => {}); };
+            if (player.dataset.docId === doc.id && player.readyState >= 1) {
+                go();
+            } else {
+                player.dataset.docId = doc.id;
+                player.src = doc.url;
+                player.addEventListener('loadedmetadata', go, { once: true });
+                player.load();
             }
-
-            videoPlayer.currentTime = seconds;
-            videoPlayer.play();
 
             document.getElementById('previewBadge').innerText = `影片: ${doc.title}`;
             document.getElementById('videoCurrentTime').innerText = formatTime(seconds);
-
-            videoPlayer.ontimeupdate = () => {
-                document.getElementById('videoCurrentTime').innerText = formatTime(videoPlayer.currentTime);
+            player.ontimeupdate = () => {
+                document.getElementById('videoCurrentTime').innerText = formatTime(player.currentTime);
             };
         }
 
         function seekToYouTube(docId, seconds) {
             const doc = dbDocs.find(d => d.id === docId);
-            if (!doc || !doc.ytId) return;
+            if (!doc) { showToast('找不到該影片 (可能已被刪除)'); return; }
+            const ytId = doc.ytId || extractYouTubeId(doc.url || '');
+            if (!ytId) { showToast('無法取得 YouTube 影片 ID'); return; }
 
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('videoViewer').classList.add('hidden');
             document.getElementById('documentViewer').classList.add('hidden');
 
             const ytViewer = document.getElementById('youtubeViewer');
-            const ytPlayer = document.getElementById('mainYtPlayer');
-            const ytCurrentTime = document.getElementById('ytCurrentTime');
-
             ytViewer.classList.remove('hidden');
             ytViewer.classList.add('flex');
 
             const startSec = Math.floor(seconds || 0);
-            ytPlayer.src = `https://www.youtube.com/embed/${doc.ytId}?start=${startSec}&autoplay=1`;
-            ytCurrentTime.innerText = formatTime(startSec);
-
+            document.getElementById('mainYtPlayer').src = `https://www.youtube.com/embed/${ytId}?start=${startSec}&autoplay=1`;
+            document.getElementById('ytCurrentTime').innerText = formatTime(startSec);
             document.getElementById('previewBadge').innerText = `YouTube: ${doc.title}`;
         }
 
+        // ===================== 工具函式 =====================
         function formatTime(sec) {
-            const m = Math.floor(sec / 60);
-            const s = Math.floor(sec % 60);
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            sec = Math.max(0, Math.floor(sec || 0));
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+            const mm = m.toString().padStart(2, '0'), ss = s.toString().padStart(2, '0');
+            return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
         }
 
         function escapeHtml(str) {
-            return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         }
 
+        let toastTimer = null;
         function showToast(msg) {
             const toast = document.getElementById('toastMessage');
             document.getElementById('toastText').innerText = msg;
             toast.classList.remove('hidden');
-            setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
         }
 
         function saveConfig() {
-            const url = document.getElementById('supabaseUrl').value.trim();
-            const key = document.getElementById('supabaseKey').value.trim();
-            const geminiKey = document.getElementById('geminiKey').value.trim();
-
-            if (url) localStorage.setItem('kb_supabase_url', url);
-            if (key) localStorage.setItem('kb_supabase_key', key);
-            if (geminiKey) localStorage.setItem('kb_gemini_key', geminiKey);
-
+            const set = (k, v) => v ? localStorage.setItem(k, v) : localStorage.removeItem(k);
+            set('kb_supabase_url', document.getElementById('supabaseUrl').value.trim());
+            set('kb_supabase_key', document.getElementById('supabaseKey').value.trim());
+            set('kb_gemini_key', document.getElementById('geminiKey').value.trim());
+            set('kb_gemini_model', document.getElementById('geminiModel').value.trim());
             initSupabase();
             closeConfigModal();
             showToast("連線設定已更新！");
         }
 
-        window.onload = function() {
+        window.onload = async function () {
+            await restoreLocalFiles();
             renderFileList();
             initSupabase();
             lucide.createIcons();
